@@ -1,0 +1,32 @@
+.lab {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: #14171c;
+  color: #e7ecf3;
+  font: 13px/1.4 Inter, system-ui, -apple-system, "Noto Sans Thai", sans-serif;
+}
+.lab-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2b313b;
+}
+.lab-bar nav { display: flex; gap: 4px; }
+.lab-bar .spacer { flex: 1; }
+.lab-bar .dims { color: #8d97a6; font-variant-numeric: tabular-nums; }
+.lab-bar .status { color: #8d97a6; }
+.lab-bar .link { color: #f47b20; text-decoration: none; }
+.lab main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+.lab-view { position: relative; min-height: 0; background: #f7f8fb; }
+.lab-view canvas { display: block; }
+.lab-panel { border-left: 1px solid #2b313b; overflow: auto; }
+
+.lab-pose { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+.lab-pose h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d97a6; }
+.lab-pose label { display: block; margin-bottom: 10px; color: #c6cdd8; }
+.lab-pose label span { float: right; font-variant-numeric: tabular-nums; color: #8d97a6; }
+.lab-pose input[type=range] { width: 100%; margin-top: 4px; }
+.lab-pose label.row { display: flex; align-items: center; gap: 6px; }
+.lab-pose label.row input { margin: 0; }

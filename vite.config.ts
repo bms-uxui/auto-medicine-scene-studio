@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { studioServer } from './vite-plugins/studio-server.js'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), studioServer()],
+  server: { fs: { allow: ['.'] } },
 })
