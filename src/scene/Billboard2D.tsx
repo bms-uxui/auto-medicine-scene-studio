@@ -110,8 +110,13 @@ export function Billboard2D({
     node.quaternion.copy(upright).slerp(camera.quaternion, blend)
 
     const mat = node.material as THREE.MeshStandardMaterial
-    mat.opacity = d.opacity ?? 1
-    mat.transparent = true
+    const opacity = d.opacity ?? 1
+    mat.opacity = opacity
+    // blending only while fading; see StaffRig for why a blended layer picks up a rim
+    mat.transparent = opacity < 0.999
+    // the cut-off follows the fade, otherwise the art stays invisible and then pops in
+    // the moment opacity climbs past it
+    mat.alphaTest = Math.max(0.02, 0.5 * opacity)
   })
 
   if (!art || !geometry) return null
@@ -130,7 +135,6 @@ export function Billboard2D({
           emissiveIntensity={1 - lit}
           roughness={0.92}
           metalness={0}
-          transparent
           alphaTest={0.5}
           side={THREE.DoubleSide}
         />

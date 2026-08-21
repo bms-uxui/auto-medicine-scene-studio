@@ -114,6 +114,11 @@ export function Inspector() {
       value: 128, min: 16, max: 256, step: 16,
       onChange: (v: number) => useStudio.getState().setExport({ colors: v }),
     },
+    langs: {
+      value: useStudio.getState().exportState.langs,
+      options: ['both', 'th', 'en'] as const,
+      onChange: (v: 'both' | 'th' | 'en') => useStudio.getState().setExport({ langs: v }),
+    },
     scale: {
       value: 1, min: 0.5, max: 2, step: 0.25,
       onChange: (v: number) => useStudio.getState().setExport({ scale: v }),

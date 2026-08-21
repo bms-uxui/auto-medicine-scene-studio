@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, TransformControls, useProgress } from '@react-three/drei'
-import { Bloom, EffectComposer, HueSaturation, N8AO } from '@react-three/postprocessing'
+import { Bloom, EffectComposer, HueSaturation } from '@react-three/postprocessing'
 import { SceneRuntime } from '../scene/SceneRuntime'
 import { Exporter } from '../export/Exporter'
 import { drawOverlay, preloadOverlayIcons } from '../overlay/draw'
+import { SCREEN_PAGES, preloadScreens, type ScreenState } from '../scene/KioskScreen'
 import { useStudio } from './store'
 import { ActorErrorBoundary } from './ErrorBoundary'
 
@@ -51,26 +52,43 @@ function Exposure() {
  * The composer cannot be built while assets are still streaming in — it would grab a
  * null buffer and throw — so it mounts only once loading has settled.
  */
+function FxProbe() {
+  // dev probe: the screenshot harness counts composer mounts to catch it being torn
+  // down and rebuilt mid-scene
+  useEffect(() => {
+    const w = window as unknown as { __fxMounts?: number }
+    w.__fxMounts = (w.__fxMounts ?? 0) + 1
+  }, [])
+  return null
+}
+
 function PostFx({ enabled }: { enabled: boolean }) {
   const { active } = useProgress()
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    if (active) {
-      setReady(false)
-      return
-    }
+    // Latching: the composer waits for the first load to settle, then stays mounted.
+    // Later loads — a kiosk screen page swapping in mid-scene — also raise `active`,
+    // and tearing the composer down for them makes the whole image jump.
+    if (ready || active) return
     const id = setTimeout(() => setReady(true), 120)
     return () => clearTimeout(id)
-  }, [active])
+  }, [active, ready])
 
   if (!enabled || !ready) return null
   return (
-    <EffectComposer enableNormalPass>
-      {/* contact occlusion only — a large radius muddies the white shell */}
-      <N8AO aoRadius={0.28} intensity={1.1} distanceFalloff={0.6} halfRes />
-      {/* only the emissive display should bloom */}
-      <Bloom intensity={0.22} luminanceThreshold={1.0} luminanceSmoothing={0.25} mipmapBlur />
-      <HueSaturation saturation={0.12} />
+    // No ambient-occlusion pass: its half-res sampling is re-randomised every frame, so
+    // the shading crawls and reads as a flicker — and it buys nothing on the flat look,
+    // where the cabinet is drawn unlit anyway.
+    // Multisampling on: the composer renders to its own target, and with MSAA off the
+    // canvas setting no longer applies — the hard edges of the flat art then crawl from
+    // frame to frame, which reads as the picture shimmering.
+    <EffectComposer multisampling={4}>
+      {import.meta.env.DEV ? <FxProbe /> : <></>}
+      {/* only the emissive parts — screen, scanner, bay light — should bloom */}
+      {/* a wide smoothing band: a hard threshold makes the glow pop on and off as the
+          scanner pulses across it */}
+      <Bloom intensity={0.25} luminanceThreshold={1.0} luminanceSmoothing={0.7} mipmapBlur />
+      <HueSaturation saturation={0.1} />
     </EffectComposer>
   )
 }
@@ -124,6 +142,12 @@ function Overlay({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement |
 
 export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'translate' | 'rotate' | 'scale' }) {
   const scene = useStudio((s) => s.scene())
+  const lang = useStudio((s) => s.lang)
+  // pull every screen page in up front: a page that decodes mid-scene both pops on the
+  // display and disturbs anything watching the loading manager
+  useEffect(() => {
+    preloadScreens(Object.keys(SCREEN_PAGES) as ScreenState[], lang)
+  }, [lang])
   const showHelpers = useStudio((s) => s.showHelpers)
   const exporting = useStudio((s) => s.exportState.running)
   const postFx = useStudio((s) => s.postFx)
@@ -131,12 +155,25 @@ export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'tra
   // attributes off a dead GL and throws before the canvas can recover
   const [contextLost, setContextLost] = useState(false)
   const overlayRef = useRef<HTMLCanvasElement>(null)
+  const holder = useRef<HTMLDivElement>(null)
+  const [cssWidth, setCssWidth] = useState(0)
+  useEffect(() => {
+    const el = holder.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => setCssWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  // While exporting, the backing store is grown to the full output resolution: copying a
+  // window-sized canvas into a 1080-wide frame just upscales it, and the render came out
+  // soft. The dpr prop is the only lever — r3f re-applies it on every commit.
+  const exportDpr = cssWidth > 0 ? Math.min(4, Math.max(1, scene.size[0] / cssWidth)) : 1
 
   return (
-    <div className="viewport" style={{ aspectRatio: `${scene.size[0]} / ${scene.size[1]}` }}>
+    <div ref={holder} className="viewport" style={{ aspectRatio: `${scene.size[0]} / ${scene.size[1]}` }}>
       <Canvas
         shadows
-        dpr={[1, 1.5]}
+        dpr={exporting ? exportDpr : [1, 1.5]}
         frameloop={exporting ? 'never' : 'always'}
         gl={{
           preserveDrawingBuffer: true,
@@ -145,7 +182,7 @@ export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'tra
           toneMapping: THREE.NeutralToneMapping,
           toneMappingExposure: 0.98,
         }}
-        camera={{ position: scene.camera.position, fov: scene.camera.fov, near: 0.05, far: 60 }}
+        camera={{ position: scene.camera.position, fov: scene.camera.fov, near: 0.15, far: 40 }}
         style={{ background: scene.background }}
       >
         <ContextWatch onLoss={setContextLost} />

@@ -11,7 +11,8 @@ import { Character, type CharacterDynamic } from './Character'
 import { ProxyCharacter } from './ProxyCharacter'
 import { Billboard2D, type BillboardDynamic } from './Billboard2D'
 import { Staff3D, type StaffDynamic } from './Staff3D'
-import { StaffRig, type StaffRigDynamic } from './StaffRig'
+import { CutoutRig, type CutoutRigDynamic } from './CutoutRig'
+import { CUTOUT_RIGS } from './cutoutRigs'
 import { ActorErrorBoundary } from '../studio/ErrorBoundary'
 import { PROP_COMPONENTS, type PropPrimitive } from './Props'
 import { StudioStage } from './Stage'
@@ -72,11 +73,15 @@ function KioskActor({ actor }: { actor: ActorDef }) {
     applyCommon(ref.current, actor, values)
     dyn.current = {
       lang,
+      time: useStudio.getState().time,
       screenState: (values?.['custom:screenState'] as KioskDynamic['screenState']) ?? 'welcome',
       doorOpen: (values?.['custom:doorOpen'] as number) ?? 0,
       scanGlow: (values?.['custom:scanGlow'] as number) ?? 0,
       cameraGlow: (values?.['custom:cameraGlow'] as number) ?? 0,
       stickerFeed: (values?.['custom:stickerFeed'] as number) ?? 0,
+      scanReach: values?.['custom:scanReach'] as number | undefined,
+      scanSpread: values?.['custom:scanSpread'] as number | undefined,
+      scanTilt: values?.['custom:scanTilt'] as number | undefined,
     }
   })
   return (
@@ -125,7 +130,6 @@ function CharacterActor({ actor }: { actor: ActorDef }) {
 function SpriteActor({ actor }: { actor: ActorDef }) {
   const ref = useRegister(actor.id)
   const spriteLit = useStudio((s) => s.lighting.spriteLit)
-  const flat = useStudio((s) => s.flatKiosk)
   const frame = useSampledFrame()
   const dyn = useRef<BillboardDynamic>({})
   useFrame(() => {
@@ -142,7 +146,7 @@ function SpriteActor({ actor }: { actor: ActorDef }) {
         url={actor.url!}
         height={(actor.params?.height as number) ?? 1.7}
         pivotX={(actor.params?.pivotX as number) ?? 0.5}
-        lit={(actor.params?.lit as number) ?? (flat ? Math.min(spriteLit, 0.18) : spriteLit)}
+        lit={(actor.params?.lit as number) ?? spriteLit}
         grade={(actor.params?.grade as string) ?? '#ffffff'}
         dyn={dyn}
       />
@@ -155,26 +159,34 @@ function PuppetActor({ actor }: { actor: ActorDef }) {
   const ref = useRegister(actor.id)
   const frame = useSampledFrame()
   const spriteLit = useStudio((s) => s.lighting.spriteLit)
-  const flat = useStudio((s) => s.flatKiosk)
-  const dyn = useRef<StaffRigDynamic>({})
+  const dyn = useRef<CutoutRigDynamic>({})
+  const grip = useRef<THREE.Object3D | null>(null)
+  const registry = useStudio((s) => s.registry)
   useFrame(() => {
     const values = frame.current[actor.id]
     applyCommon(ref.current, actor, values)
+    if (grip.current && registry.get(`${actor.id}:grip`) !== grip.current) {
+      registry.set(`${actor.id}:grip`, grip.current)
+    }
     dyn.current = {
       opacity: (values?.opacity as number) ?? 1,
       tilt: (values?.['custom:tilt'] as number) ?? (actor.params?.tilt as number) ?? 0.65,
       reach: (values?.reach as number) ?? 0,
       reachTarget: v3(values?.['custom:reachTarget'], KIOSK_ANCHORS.scanner),
+      bend: (values?.['custom:bend'] as number) ?? 0,
+      armOnly: (values?.['custom:armOnly'] as number) ?? 0,
     }
   })
   return (
     <group ref={ref}>
-      <StaffRig
+      <CutoutRig
         url={actor.url!}
+        rig={CUTOUT_RIGS[(actor.params?.rig as string) ?? 'staff'] ?? CUTOUT_RIGS.staff}
         height={(actor.params?.height as number) ?? 1.78}
-        pivotX={(actor.params?.pivotX as number) ?? 0.393}
-        lit={(actor.params?.lit as number) ?? (flat ? Math.min(spriteLit, 0.18) : spriteLit)}
+        pivotX={actor.params?.pivotX as number | undefined}
+        lit={(actor.params?.lit as number) ?? spriteLit}
         dyn={dyn}
+        gripRef={grip}
       />
     </group>
   )
@@ -207,13 +219,40 @@ function StaffActor({ actor }: { actor: ActorDef }) {
 function PropActor({ actor }: { actor: ActorDef }) {
   const ref = useRegister(actor.id)
   const frame = useSampledFrame()
+  const registry = useStudio((s) => s.registry)
   const Comp = PROP_COMPONENTS[(actor.primitive ?? 'medicineBox') as PropPrimitive]
+  const world = useMemo(() => new THREE.Vector3(), [])
+  const local = useMemo(() => new THREE.Vector3(), [])
+  const quat = useMemo(() => new THREE.Quaternion(), [])
   useFrame(() => {
-    applyCommon(ref.current, actor, frame.current[actor.id])
+    const values = frame.current[actor.id]
+    applyCommon(ref.current, actor, values)
+    // `attachTo` names something in the registry — a character's hand, say — and the
+    // prop rides it, with its own position track read as an offset from that point
+    const attach = (values?.['custom:attachTo'] as string) ?? (actor.params?.attachTo as string | undefined)
+    const host = attach ? registry.get(attach) : undefined
+    if (host && ref.current) {
+      host.getWorldPosition(world)
+      host.getWorldQuaternion(quat)
+      // the offset is expressed in the host's frame: a negative z then means "behind
+      // the hand", whichever way the character happens to be facing
+      const offset = v3(values?.position, actor.position ?? [0, 0, 0])
+      local.set(offset[0], offset[1], offset[2]).applyQuaternion(quat)
+      ref.current.position.copy(world).add(local)
+      ref.current.quaternion.copy(quat)
+      const rot = v3(values?.rotation, actor.rotation ?? [0, 0, 0])
+      ref.current.rotateX(rot[0])
+      ref.current.rotateY(rot[1])
+      ref.current.rotateZ(rot[2])
+    }
   })
+  // the sticker reads its peel from the timeline; other primitives ignore it
+  const curl = (frame.current[actor.id]?.['custom:curl'] as number) ?? 0
+  // the plastic case reads its lid from the same channel mechanism
+  const open = (frame.current[actor.id]?.['custom:open'] as number) ?? 0
   return (
     <group ref={ref}>
-      <Comp />
+      <Comp curl={curl} open={open} empty={(frame.current[actor.id]?.['custom:empty'] as number) ?? 0} />
     </group>
   )
 }
@@ -249,6 +288,16 @@ function CameraRig({ scene }: { scene: SceneDef }) {
     const tp = v3(tgt?.position, scene.camera.target)
     target.current.set(tp[0], tp[1], tp[2])
     camera.lookAt(target.current)
+    if (import.meta.env.DEV) {
+      // dev probe: lets the screenshot harness see what the camera is actually doing
+      ;(window as unknown as { __camObj?: unknown }).__camObj = camera
+      ;(window as unknown as { __cam?: unknown }).__cam = {
+        fov: camera.fov,
+        aspect: +camera.aspect.toFixed(4),
+        pos: camera.position.toArray().map((n) => +n.toFixed(3)),
+        view: camera.view ? { ...camera.view } : null,
+      }
+    }
   })
   return null
 }

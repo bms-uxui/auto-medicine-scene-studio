@@ -136,7 +136,8 @@ export function Character({ url, clip, dyn, posed, tint, ...props }: CharacterPr
     // idle breathing keeps a clip-less scan from reading as a mannequin
     const spine = bones.current.spine
     if (spine && !resolved) {
-      const t = state.clock.elapsedTime
+      // timeline seconds when the scene drives them, so a paused frame holds still
+      const t = clipTime ?? state.clock.elapsedTime
       spine.rotation.x = Math.sin(t * 1.1) * 0.012
       spine.rotation.y = Math.sin(t * 0.42) * 0.02
     }

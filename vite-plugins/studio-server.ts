@@ -116,8 +116,11 @@ export function studioServer(): Plugin {
             const args =
               format === 'mp4'
                 ? ['-y', '-framerate', String(fps), '-i', path.join(dir, 'frame_%05d.png'),
+                   // frames captured at an odd size would be rejected by libx264
+                   '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
                    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-movflags', '+faststart', out]
                 : ['-y', '-framerate', String(fps), '-i', path.join(dir, 'frame_%05d.png'),
+                   '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
                    '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1', out]
             const r = await run('ffmpeg', args)
             if (r.code === 127) {

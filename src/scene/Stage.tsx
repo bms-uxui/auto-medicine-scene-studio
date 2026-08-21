@@ -21,7 +21,7 @@ export const LIGHTING_DEFAULTS: LightingConfig = {
   rim: 0.55,
   env: 0.2,
   shadow: 0.75,
-  spriteLit: 0.55,
+  spriteLit: 1,
 }
 
 /**

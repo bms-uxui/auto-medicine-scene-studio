@@ -28,8 +28,9 @@ export const KIOSK_LAYOUT: KioskLayout = {
   screen: [3919, 1479, 1080, 1920],
   cameraBar: [4084, 1051, 750, 180],
   sensorDot: [4433, 3660, 52, 52],
-  stickerSlot: [3960, 3900, 340, 80],
-  receiptSlot: [4360, 3900, 340, 80],
+  // the label prints from the middle slot; the receipt is the one on the left
+  receiptSlot: [3960, 3900, 340, 80],
+  stickerSlot: [4360, 3900, 340, 80],
   scannerBox: [4770, 3830, 230, 230],
   pickup: [3919, 4970, 1080, 1080],
 }
@@ -88,11 +89,17 @@ export interface KioskAnchors {
   stickerSlot: Vec3
   receiptSlot: Vec3
   pickup: Vec3
+  pickupShelf: Vec3
   /** centre of the cabinet, used to frame the establishing shot */
   body: Vec3
 }
 
 /** World-space (kiosk-local) points scenes aim cameras and hands at. */
+/** how deep the pick-up recess is cut into the cabinet, in metres */
+export const BAY_DEPTH = 0.3
+/** height of the shelf's top surface above the floor of that recess */
+export const BAY_SHELF_RISE = 0.052
+
 export function computeAnchors(layout: KioskLayout): KioskAnchors {
   const m = computeMetrics(layout)
   const at = (r: Rect): Vec3 => [r.x, r.y, m.face]
@@ -103,6 +110,8 @@ export function computeAnchors(layout: KioskLayout): KioskAnchors {
     stickerSlot: at(m.stickerSlot),
     receiptSlot: at(m.receiptSlot),
     pickup: at(m.pickup),
+    // the surface a package actually rests on, in the middle of the recess
+    pickupShelf: [m.pickup.x, m.pickup.y - m.pickup.h / 2 + BAY_SHELF_RISE + 0.007, m.face - BAY_DEPTH / 2],
     body: [0.1, m.size.height * 0.5, 0],
   }
 }

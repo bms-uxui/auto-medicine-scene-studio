@@ -99,6 +99,8 @@ export function KioskScreen({
     mat.emissiveIntensity = 0.55 * (d.brightness ?? 1)
   })
 
+  // The panel goes through the tone curve: left untone-mapped it sits right on the
+  // bloom threshold, and the halo pulses in and out as the shot moves.
   return (
     <mesh>
       <planeGeometry args={[width, height]} />
@@ -108,7 +110,6 @@ export function KioskScreen({
         emissiveIntensity={0.55}
         roughness={0.12}
         metalness={0}
-        toneMapped={false}
       />
     </mesh>
   )

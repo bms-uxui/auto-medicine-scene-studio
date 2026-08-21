@@ -18,6 +18,8 @@ interface ExportState {
   colors: number
   /** render scale relative to the scene size */
   scale: number
+  /** which language tracks to write — 'both' produces a TH and an EN file */
+  langs: 'both' | 'th' | 'en'
   message: string
 }
 
@@ -83,9 +85,8 @@ export const useStudio = create<StudioState>((set, get) => ({
   selection: null,
   showHelpers: false,
   showOverlay: true,
-  // opt-in: the composer's normal pass is what tips the GPU into a context loss on
-  // some machines, so the studio ships without it and `?fx` turns it back on
-  postFx: new URLSearchParams(location.search).has('fx'),
+  // on by default; `?nofx` turns the composer off if a machine struggles with it
+  postFx: !new URLSearchParams(location.search).has('nofx'),
   flatKiosk: true,
   lighting: { ...LIGHTING_DEFAULTS },
   liveryId: DEFAULT_LIVERY.id,
@@ -93,7 +94,7 @@ export const useStudio = create<StudioState>((set, get) => ({
   proxyCharacters: new URLSearchParams(location.search).has('proxy'),
   lang: 'th',
   lastError: null,
-  exportState: { running: false, frame: 0, total: 0, format: 'gif', fps: 15, colors: 128, scale: 1, message: '' },
+  exportState: { running: false, frame: 0, total: 0, format: 'gif', fps: 15, colors: 128, scale: 1, langs: 'both', message: '' },
   registry: new Map(),
 
   scene: () => {

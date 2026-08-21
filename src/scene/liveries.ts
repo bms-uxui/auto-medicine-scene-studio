@@ -31,8 +31,9 @@ const TEAL_LAYOUT: KioskLayout = {
   screen: [3919, 1021, 1094, 1894],
   cameraBar: [4213, 703, 503, 134],
   sensorDot: [4400, 3380, 60, 60],
-  stickerSlot: [3980, 3560, 330, 78],
-  receiptSlot: [4380, 3560, 330, 78],
+  // the label prints from the middle slot; the receipt is the one on the left
+  receiptSlot: [3980, 3560, 330, 78],
+  stickerSlot: [4380, 3560, 330, 78],
   scannerBox: [4790, 3490, 220, 220],
   pickup: [3858, 4584, 1155, 966],
 }

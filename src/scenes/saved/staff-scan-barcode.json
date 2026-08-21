@@ -1,0 +1,537 @@
+{
+  "id": "staff-scan-barcode",
+  "name": "Staff · Scan Barcode",
+  "duration": 11.5,
+  "fps": 30,
+  "size": [
+    1080,
+    683
+  ],
+  "background": "#ffffff",
+  "camera": {
+    "position": [
+      8.483135641699796,
+      4.374265815157975,
+      11.972358456942342
+    ],
+    "target": [
+      0.1,
+      1,
+      0
+    ],
+    "fov": 22
+  },
+  "actors": [
+    {
+      "id": "kiosk",
+      "kind": "kiosk",
+      "label": "Kiosk",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "staff",
+      "kind": "puppet",
+      "label": "Staff (2D rig)",
+      "url": "/textures/actors/staff.svg",
+      "position": [
+        -0.1,
+        0,
+        1.15
+      ],
+      "visible": false,
+      "params": {
+        "height": 1.78,
+        "tilt": 0.7,
+        "pivotX": 0.393
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "id": "camera.position",
+      "target": "camera",
+      "property": "position",
+      "keys": [
+        {
+          "t": 0,
+          "v": [
+            8.483135641699796,
+            4.374265815157975,
+            11.972358456942342
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 0.4,
+          "v": [
+            8.483135641699796,
+            4.374265815157975,
+            11.972358456942342
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 1.6,
+          "v": [
+            2.697080597122253,
+            2.7566531811339368,
+            4.313264901900466
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 2.4,
+          "v": [
+            1.749655962203042,
+            2.21777870625244,
+            3.086742949098899
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 4,
+          "v": [
+            1.749655962203042,
+            2.21777870625244,
+            3.086742949098899
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 5.2,
+          "v": [
+            2.212403804348889,
+            1.5870923929229699,
+            2.865929702795483
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 7,
+          "v": [
+            2.6303746937803645,
+            1.645419093090395,
+            2.9473212908296054
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 9,
+          "v": [
+            2.4649327667459318,
+            1.5354512550428716,
+            2.686441310362535
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 11.5,
+          "v": [
+            2.4649327667459318,
+            1.5354512550428716,
+            2.686441310362535
+          ],
+          "ease": "standard"
+        }
+      ]
+    },
+    {
+      "id": "target.position",
+      "target": "target",
+      "property": "position",
+      "keys": [
+        {
+          "t": 0,
+          "v": [
+            0.1,
+            1,
+            0
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 0.4,
+          "v": [
+            0.1,
+            1,
+            0
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 1.6,
+          "v": [
+            0.44734111543450067,
+            1.8002594033722439,
+            0.4166018158236057
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 4,
+          "v": [
+            0.44734111543450067,
+            1.8002594033722439,
+            0.4166018158236057
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 5.2,
+          "v": [
+            0.5603112840466926,
+            1.066147859922179,
+            0.4166018158236057
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 7,
+          "v": [
+            0.3603112840466926,
+            1.1861478599221789,
+            0.5966018158236057
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 9,
+          "v": [
+            0.5603112840466926,
+            1.066147859922179,
+            0.4166018158236057
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 11.5,
+          "v": [
+            0.5603112840466926,
+            1.066147859922179,
+            0.4166018158236057
+          ],
+          "ease": "standard"
+        }
+      ]
+    },
+    {
+      "id": "camera.custom.fov",
+      "target": "camera",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 0,
+          "v": 22,
+          "ease": "standard"
+        },
+        {
+          "t": 0.4,
+          "v": 22,
+          "ease": "standard"
+        },
+        {
+          "t": 2.4,
+          "v": 26,
+          "ease": "smooth"
+        },
+        {
+          "t": 9,
+          "v": 24,
+          "ease": "standard"
+        },
+        {
+          "t": 11.5,
+          "v": 24,
+          "ease": "standard"
+        }
+      ],
+      "path": "fov"
+    },
+    {
+      "id": "kiosk.custom.screenState",
+      "target": "kiosk",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 0,
+          "v": "welcome",
+          "ease": "linear"
+        },
+        {
+          "t": 0.8,
+          "v": "selectRole",
+          "ease": "linear"
+        },
+        {
+          "t": 2,
+          "v": "faceScan",
+          "ease": "linear"
+        },
+        {
+          "t": 4.6,
+          "v": "scanBarcode",
+          "ease": "linear"
+        },
+        {
+          "t": 8.2,
+          "v": "addMedicine",
+          "ease": "linear"
+        },
+        {
+          "t": 9.6,
+          "v": "addMedicineDone",
+          "ease": "linear"
+        }
+      ],
+      "path": "screenState"
+    },
+    {
+      "id": "kiosk.custom.cameraGlow",
+      "target": "kiosk",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 1.9,
+          "v": 0,
+          "ease": "standard"
+        },
+        {
+          "t": 2.6,
+          "v": 1,
+          "ease": "decelerate"
+        },
+        {
+          "t": 3.8,
+          "v": 0.4,
+          "ease": "standard"
+        },
+        {
+          "t": 4.4,
+          "v": 0,
+          "ease": "standard"
+        }
+      ],
+      "path": "cameraGlow"
+    },
+    {
+      "id": "kiosk.custom.scanGlow",
+      "target": "kiosk",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 5.6,
+          "v": 0,
+          "ease": "standard"
+        },
+        {
+          "t": 6.6,
+          "v": 1,
+          "ease": "decelerate"
+        },
+        {
+          "t": 9.2,
+          "v": 0.9,
+          "ease": "standard"
+        },
+        {
+          "t": 9.6,
+          "v": 0,
+          "ease": "accelerate"
+        }
+      ],
+      "path": "scanGlow"
+    },
+    {
+      "id": "staff.visible",
+      "target": "staff",
+      "property": "visible",
+      "keys": [
+        {
+          "t": 0,
+          "v": false,
+          "ease": "linear"
+        },
+        {
+          "t": 4.2,
+          "v": true,
+          "ease": "linear"
+        }
+      ]
+    },
+    {
+      "id": "staff.position",
+      "target": "staff",
+      "property": "position",
+      "keys": [
+        {
+          "t": 4.2,
+          "v": [
+            -1.55,
+            0,
+            1.95
+          ],
+          "ease": "standard"
+        },
+        {
+          "t": 6.9,
+          "v": [
+            0.2,
+            0,
+            1
+          ],
+          "ease": "smooth"
+        },
+        {
+          "t": 11.5,
+          "v": [
+            0.2,
+            0,
+            1
+          ],
+          "ease": "standard"
+        }
+      ]
+    },
+    {
+      "id": "staff.opacity",
+      "target": "staff",
+      "property": "opacity",
+      "keys": [
+        {
+          "t": 4.2,
+          "v": 1,
+          "ease": "standard"
+        },
+        {
+          "t": 11.5,
+          "v": 1,
+          "ease": "standard"
+        }
+      ]
+    },
+    {
+      "id": "staff.custom.tilt",
+      "target": "staff",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 4.2,
+          "v": 0.3,
+          "ease": "standard"
+        },
+        {
+          "t": 6.6,
+          "v": 0.45,
+          "ease": "smooth"
+        },
+        {
+          "t": 11.5,
+          "v": 0.45,
+          "ease": "standard"
+        }
+      ],
+      "path": "tilt"
+    },
+    {
+      "id": "staff.reach",
+      "target": "staff",
+      "property": "reach",
+      "keys": [
+        {
+          "t": 5.4,
+          "v": 0,
+          "ease": "standard"
+        },
+        {
+          "t": 6.8,
+          "v": 1,
+          "ease": "decelerate"
+        },
+        {
+          "t": 11.5,
+          "v": 1,
+          "ease": "standard"
+        }
+      ]
+    },
+    {
+      "id": "staff.custom.reachTarget",
+      "target": "staff",
+      "property": "custom",
+      "keys": [
+        {
+          "t": 0,
+          "v": [
+            0.5603112840466926,
+            1.006147859922179,
+            0.5366018158236057
+          ],
+          "ease": "standard"
+        }
+      ],
+      "path": "reachTarget"
+    }
+  ],
+  "markers": [
+    {
+      "t": 1.6,
+      "label": "camera callout"
+    },
+    {
+      "t": 5.2,
+      "label": "scan barcode"
+    },
+    {
+      "t": 9.6,
+      "label": "complete"
+    }
+  ],
+  "steps": [
+    {
+      "id": "camera",
+      "label": "ตำแหน่งกล้อง",
+      "labelEn": "Camera Placement",
+      "icon": "camera",
+      "t0": 0,
+      "t1": 4.6
+    },
+    {
+      "id": "barcode",
+      "label": "สแกนบาร์โค้ด",
+      "labelEn": "Scan Barcode",
+      "icon": "barcode",
+      "t0": 4.6,
+      "t1": 11.5
+    }
+  ],
+  "captions": [
+    {
+      "t0": 1.9,
+      "t1": 4.3,
+      "text": "มองกล้องเพื่อยืนยันตัวตนเจ้าหน้าที่",
+      "textEn": "Look at the camera to verify staff identity"
+    },
+    {
+      "t0": 5.8,
+      "t1": 9.4,
+      "text": "สแกนบาร์โค้ดยาก่อนเติมเข้าตู้",
+      "textEn": "Scan the medicine barcode before loading"
+    },
+    {
+      "t0": 9.8,
+      "t1": 11.4,
+      "text": "สแกนสำเร็จ เติมยาเข้าตู้ได้เลย",
+      "textEn": "Scanned — the medicine is ready to load"
+    }
+  ],
+  "success": [
+    {
+      "t0": 9.6,
+      "t1": 11.5
+    }
+  ]
+}

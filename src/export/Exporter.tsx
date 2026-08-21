@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { advance, useThree } from '@react-three/fiber'
 import type { SceneDef } from '../anim/types'
 import { drawOverlay, preloadOverlayIcons } from '../overlay/draw'
+import { SCREEN_PAGES, preloadScreens, type ScreenState } from '../scene/KioskScreen'
 import { useStudio, type ExportFormat } from '../studio/store'
 
 async function post(url: string, body: unknown) {
@@ -32,12 +33,18 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
     const run = async () => {
       const settings = useStudio.getState().exportState
       const scale = settings.scale || 1
-      const W = Math.round(scene.size[0] * scale)
-      const H = Math.round(scene.size[1] * scale)
+      // even dimensions: H.264 in yuv420p subsamples chroma 2x2 and refuses an odd size
+      const even = (n: number) => Math.max(2, Math.round(n / 2) * 2)
+      const W = even(scene.size[0] * scale)
+      const H = even(scene.size[1] * scale)
       const fps = settings.fps || scene.fps
       const total = Math.round(scene.duration * fps)
       const dt = 1 / fps
-      const lang = useStudio.getState().lang
+      // 'both' writes a TH and an EN file: the captions, the step rail and the kiosk's
+      // own screen are all language-dependent, so each one needs its own render pass
+      const langs: Array<'th' | 'en'> =
+        settings.langs === 'both' ? ['th', 'en'] : [settings.langs as 'th' | 'en']
+      const restoreLang = useStudio.getState().lang
 
       const out = document.createElement('canvas')
       out.width = W
@@ -49,14 +56,32 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       const ovCtx = ov.getContext('2d')!
 
       await preloadOverlayIcons()
-      setExport({ total, frame: 0, message: 'rendering…' })
-      await post('/__studio/frames/begin', { scene: scene.id })
+
+      // Render at the exact output resolution. The viewport canvas is only as wide as
+      // the window allows, and copying that into a larger frame just upscales it — the
+      // export came out soft. Going through r3f's own setSize keeps the post-processing
+      // composer's render targets in step.
+      // The viewport switches its pixel ratio to the export resolution while
+      // `exportState.running` is set (see Viewport); wait for that resize — and the
+      // composer's targets — to land before the first capture.
+      await new Promise((r) => setTimeout(r, 120))
+
+      const saved: string[] = []
+      for (const lang of langs) {
+      const key = langs.length > 1 ? `${scene.id}-${lang}` : scene.id
+      useStudio.getState().set('lang', lang)
+      preloadScreens(Object.keys(SCREEN_PAGES) as ScreenState[], lang)
+      // give the swapped-in screen pages a moment to decode before the first frame
+      await new Promise((r) => setTimeout(r, 250))
+
+      setExport({ total, frame: 0, message: `rendering ${lang.toUpperCase()}…` })
+      await post('/__studio/frames/begin', { scene: key })
 
       let clock = performance.now()
       let batch: string[] = []
       const flush = async (startIndex: number) => {
         if (batch.length === 0) return
-        const payload = { scene: scene.id, startIndex, frames: batch }
+        const payload = { scene: key, startIndex, frames: batch }
         batch = []
         await post('/__studio/frames', payload)
       }
@@ -94,18 +119,23 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       await flush(batchStart)
 
       if (cancelled) {
+        useStudio.getState().set('lang', restoreLang)
         setExport({ running: false, message: 'cancelled' })
         return
       }
-      setExport({ message: `encoding ${format}…` })
+      setExport({ message: `encoding ${format} (${lang.toUpperCase()})…` })
       const result = await post('/__studio/encode', {
-        scene: scene.id,
+        scene: key,
         fps,
         format: format satisfies ExportFormat,
         colors: settings.colors,
         size: [W, H],
       })
-      setExport({ running: false, message: `saved ${result.path}` })
+      saved.push(result.path)
+      }
+
+      useStudio.getState().set('lang', restoreLang)
+      setExport({ running: false, message: `saved ${saved.join(' + ')}` })
     }
 
     run().catch((err: Error) => {

@@ -174,10 +174,12 @@ export function drawOverlay(
     ctx.textBaseline = 'middle'
     ctx.font = `600 ${LAYOUT.chip.labelSize * s}px "Noto Sans Thai", Inter, Helvetica, Arial, sans-serif`
     const label = lang === 'th' ? step.label : step.labelEn
-    const words = label.split(' ')
+    // the scene decides where a label breaks: splitting on every space put "QR" and
+    // "Code" on separate lines
+    const lines = label.split('\n')
     const lineH = LAYOUT.chip.labelSize * 1.25 * s
-    const top = y + chipH * LAYOUT.chip.labelCenter - ((words.length - 1) * lineH) / 2
-    words.forEach((word, wi) => ctx.fillText(word, rail.x + rail.w / 2, top + wi * lineH, rail.w * 0.86))
+    const top = y + chipH * LAYOUT.chip.labelCenter - ((lines.length - 1) * lineH) / 2
+    lines.forEach((line, li) => ctx.fillText(line, rail.x + rail.w / 2, top + li * lineH, rail.w * 0.86))
   })
 
   // success flash: the card dims and a green check lands, as on the Figma Complete board

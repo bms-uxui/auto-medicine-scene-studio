@@ -5,18 +5,19 @@ import { useFrame } from '@react-three/fiber'
 import { BRAND } from './textures'
 import { KioskScreen, type ScreenDynamic, type ScreenState } from './KioskScreen'
 import { GroundBlob } from './GroundBlob'
-import { computeAnchors, computeMetrics, type KioskLayout, type KioskMetrics } from './kioskLayout'
+import { BAY_DEPTH, BAY_SHELF_RISE, computeAnchors, computeMetrics, type KioskLayout, type KioskMetrics } from './kioskLayout'
 import { DEFAULT_LIVERY, type Livery, type UvWindow } from './liveries'
 
 /** how far the scanner beam reaches out of the window, in metres */
 const BEAM_LEN = 0.42
+/** scanner beam colour */
+const BEAM_COLOR = '#2fe08a'
 
 /** how far the scanner window is sunk into the fascia, and how much it narrows */
 const SCANNER_DEPTH = 0.055
 const SCANNER_TAPER = 0.5
 
-/** how deep the pick-up recess is cut into the cabinet, in metres */
-const BAY_DEPTH = 0.3
+/** the recess depth and the shelf height live with the rest of the layout maths */
 /** the front slab is cut the full depth of the recess, so nothing of the cabinet is
  *  left standing behind the opening */
 const FASCIA = BAY_DEPTH
@@ -52,7 +53,20 @@ export const KIOSK_SIZE = DEFAULT_METRICS.size
 export const KIOSK_ANCHORS = computeAnchors(DEFAULT_LIVERY.layout)
 
 export type KioskDynamic = Partial<
-  Pick<KioskConfig, 'screenState' | 'doorOpen' | 'scanGlow' | 'cameraGlow' | 'stickerFeed' | 'lang'>
+  Pick<KioskConfig, 'screenState' | 'doorOpen' | 'scanGlow' | 'cameraGlow' | 'stickerFeed' | 'lang'> & {
+    /** timeline seconds; drives every cyclic effect so a paused scene is a still frame
+     *  and an export renders the same pixels for the same frame */
+    time?: number
+    /** how far the scanner beam reaches, in metres — set it to the distance of whatever
+     *  is being scanned and the beam stops on it instead of passing through */
+    scanReach?: number
+    /** radius the beam has spread to at that distance; match it to half the height of
+     *  the thing being read and the beam closes on its top and bottom edges */
+    scanSpread?: number
+    /** beam pitch in radians, positive tilts it up; the slip a patient holds hangs
+     *  below the window, so that scene aims the beam down at it */
+    scanTilt?: number
+  }
 >
 
 /**
@@ -94,8 +108,8 @@ export function Kiosk({
   const scanRef = useRef<THREE.Mesh>(null)
   const beamRef = useRef<THREE.Mesh>(null)
   const beamLightRef = useRef<THREE.SpotLight>(null)
-  const beamLineRef = useRef<THREE.Mesh>(null)
   const beamTargetRef = useRef<THREE.Object3D>(null)
+  const beamRigRef = useRef<THREE.Group>(null)
   const camRef = useRef<THREE.Mesh>(null)
   const printRef = useRef<THREE.Group>(null)
   const elapsed = useRef(0)
@@ -262,38 +276,69 @@ export function Kiosk({
   }, [M])
   useEffect(() => () => scannerFunnel.dispose(), [scannerFunnel])
 
+  /**
+   * Beam cone: its point sits in the scanner window and it spreads as it travels out.
+   * The fade is baked into vertex colours — the material blends additively, so a colour
+   * running down to black is the same thing as running down to invisible.
+   */
+  const beamGeometry = useMemo(() => {
+    const g = new THREE.CylinderGeometry(M.scannerBox.w * 0.85, 0.004, BEAM_LEN, 24, 8, true)
+    g.rotateX(Math.PI / 2) // +Y (the wide end) turns into +Z, away from the cabinet
+    const pos = g.attributes.position
+    const base = new THREE.Color(BEAM_COLOR)
+    const colors = new Float32Array(pos.count * 3)
+    for (let i = 0; i < pos.count; i++) {
+      const t = THREE.MathUtils.clamp((pos.getZ(i) + BEAM_LEN / 2) / BEAM_LEN, 0, 1)
+      const fade = Math.pow(1 - t, 1.6)
+      colors[i * 3] = base.r * fade
+      colors[i * 3 + 1] = base.g * fade
+      colors[i * 3 + 2] = base.b * fade
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    return g
+  }, [M])
+  useEffect(() => () => beamGeometry.dispose(), [beamGeometry])
+
   useFrame((_, dt) => {
     elapsed.current += dt
     const d0 = dyn?.current ?? {}
+    // cyclic effects run on timeline time when the scene provides it: driving them from
+    // the render clock keeps them moving while playback is paused, which reads as a
+    // flicker, and makes two exports of the same frame differ
+    const clock = d0.time ?? elapsed.current
     screenDyn.current = { state: d0.screenState ?? cfg.screenState, lang: d0.lang ?? cfg.lang }
 
     const open = THREE.MathUtils.clamp(d0.doorOpen ?? cfg.doorOpen, 0, 1)
     // the shutter drops straight down and disappears behind the fascia
     if (doorRef.current) doorRef.current.position.y = -open * (M.pickup.h + 0.012)
-    if (bayLightRef.current) bayLightRef.current.intensity = 0.05 + open * 0.45
+    if (bayLightRef.current) bayLightRef.current.intensity = 0.08 + open * 1.15
     if (bayGlowRef.current) {
       const m = bayGlowRef.current.material as THREE.MeshStandardMaterial
-      m.emissiveIntensity = 0.15 + open * 1.0
+      m.emissiveIntensity = 0.2 + open * 1.9
     }
     const scan = THREE.MathUtils.clamp(d0.scanGlow ?? cfg.scanGlow, 0, 1)
     if (scanRef.current) {
       const m = scanRef.current.material as THREE.MeshStandardMaterial
-      m.emissiveIntensity = 0.3 + scan * 4
+      m.emissiveIntensity = 0.3 + scan * 1.6
     }
     // the beam fires out of the window: a soft additive cone, a sweeping read line
     // and a real spot light so whatever is held up to it picks up the red spill
     if (beamRef.current) {
-      const flicker = 0.86 + Math.sin(elapsed.current * 34) * 0.14
+      // the cone is authored at BEAM_LEN long and BEAM_SPREAD wide; scaling it lets a
+      // scene land the beam exactly on the card or box being presented
+      const reach = d0.scanReach ?? BEAM_LEN
+      const spread = d0.scanSpread ?? M.scannerBox.w * 0.85
+      beamRef.current.scale.set(spread / (M.scannerBox.w * 0.85), spread / (M.scannerBox.w * 0.85), reach / BEAM_LEN)
+      beamRef.current.position.z = reach / 2 - SCANNER_DEPTH / 2
+      if (beamRigRef.current) beamRigRef.current.rotation.x = -(d0.scanTilt ?? 0.16)
+      // two slow beats against each other, then eased into — the beam breathes rather
+      // than strobes
+      const flicker = 0.9 + Math.sin(clock * 4.6) * 0.07 + Math.sin(clock * 7.9) * 0.03
       beamRef.current.visible = scan > 0.01
       const m = beamRef.current.material as THREE.MeshBasicMaterial
-      m.opacity = scan * 0.16 * flicker
-    }
-    if (beamLineRef.current) {
-      beamLineRef.current.visible = scan > 0.01
-      const m = beamLineRef.current.material as THREE.MeshBasicMaterial
-      m.opacity = scan * 0.85
-      // the read line sweeps across the beam the way a laser scanner does
-      beamLineRef.current.position.y = Math.sin(elapsed.current * 7.5) * BEAM_LEN * 0.16
+      const want = scan * 0.3 * flicker
+      // on a timeline the value is exact, so the same frame always renders the same
+      m.opacity = d0.time === undefined ? THREE.MathUtils.damp(m.opacity, want, 9, dt) : want
     }
     if (beamLightRef.current) {
       // a spot light aims at its target object, which has to live in the scene graph
@@ -304,7 +349,7 @@ export function Kiosk({
     }
     if (camRef.current) {
       const m = camRef.current.material as THREE.MeshStandardMaterial
-      m.emissiveIntensity = (d0.cameraGlow ?? cfg.cameraGlow) * 3
+      m.emissiveIntensity = (d0.cameraGlow ?? cfg.cameraGlow) * 1.6
     }
     if (printRef.current) {
       // the printed label slides out of the slot and hangs down as it feeds
@@ -347,7 +392,7 @@ export function Kiosk({
       {show.livery && (
         <>
   {/* Figma livery: front panel */}
-        <mesh position={[0, h / 2, d / 2 + 0.002]} geometry={frontPanel.panel} castShadow>
+        <mesh position={[0, h / 2, d / 2 + 0.006]} geometry={frontPanel.panel} castShadow>
           <meshStandardMaterial map={frontMap} transparent roughness={0.26} metalness={0.02} />
         </mesh>
         </>
@@ -355,7 +400,7 @@ export function Kiosk({
 
       {/* Figma livery: LH / RH panels */}
       {[1, -1].map((s) => (
-        <mesh key={s} position={[(s * w) / 2 + s * 0.002, h / 2, 0]} rotation={[0, (s * Math.PI) / 2, 0]}>
+        <mesh key={s} position={[(s * w) / 2 + s * 0.006, h / 2, 0]} rotation={[0, (s * Math.PI) / 2, 0]}>
           <planeGeometry args={[d, h]} />
           <meshStandardMaterial map={sideMap} transparent roughness={0.26} metalness={0.02} />
         </mesh>
@@ -364,7 +409,7 @@ export function Kiosk({
       {show.screen && (
         <>
   {/* touchscreen, sitting in the artwork's screen cut-out */}
-        <group position={[M.screen.x, M.screen.y, d / 2 + 0.004]}>
+        <group position={[M.screen.x, M.screen.y, d / 2 + 0.012]}>
           <RoundedBox args={[M.screen.w + 0.02, M.screen.h + 0.02, 0.026]} radius={0.01} smoothness={4} castShadow>
             <meshStandardMaterial color="#171b22" roughness={0.38} metalness={0.55} />
           </RoundedBox>
@@ -378,7 +423,7 @@ export function Kiosk({
       {show.camera && (
         <>
   {/* camera bar */}
-        <group position={[M.cameraBar.x, M.cameraBar.y, d / 2 + 0.004]}>
+        <group position={[M.cameraBar.x, M.cameraBar.y, d / 2 + 0.012]}>
           <RoundedBox args={[M.cameraBar.w, M.cameraBar.h, 0.02]} radius={M.cameraBar.h * 0.45} smoothness={3}>
             <meshStandardMaterial color="#20242c" roughness={0.32} metalness={0.6} />
           </RoundedBox>
@@ -393,7 +438,7 @@ export function Kiosk({
       {show.slots && (
         <>
   {/* sensor dot above the slot row */}
-        <mesh position={[M.sensorDot.x, M.sensorDot.y, d / 2 + 0.004]}>
+        <mesh position={[M.sensorDot.x, M.sensorDot.y, d / 2 + 0.011]}>
           <circleGeometry args={[M.sensorDot.w / 2, 20]} />
           <meshStandardMaterial color="#2a2f38" roughness={0.35} metalness={0.4} />
         </mesh>
@@ -403,7 +448,7 @@ export function Kiosk({
       {show.scanner && (
         <>
   {/* barcode / QR scanner window */}
-        <group position={[M.scannerBox.x, M.scannerBox.y, d / 2 + 0.002]}>
+        <group position={[M.scannerBox.x, M.scannerBox.y, d / 2 + 0.009]}>
           {/* dark rim around the mouth — four strips, so nothing covers the opening */}
           {([-1, 1] as const).map((sy) => (
             <mesh key={`rh${sy}`} position={[0, (sy * M.scannerBox.h) / 2, 0.001]}>
@@ -433,28 +478,23 @@ export function Kiosk({
             <planeGeometry args={[M.scannerBox.w * SCANNER_TAPER, M.scannerBox.h * SCANNER_TAPER]} />
             <meshStandardMaterial color="#14181f" roughness={0.3} metalness={0.55} />
           </mesh>
-          {/* beam cone, widening as it leaves the window */}
-          <mesh ref={beamRef} position={[0, 0, BEAM_LEN / 2 - SCANNER_DEPTH / 2]} rotation={[Math.PI / 2, 0, 0]} visible={false}>
-            <cylinderGeometry args={[M.scannerBox.w * 0.5, M.scannerBox.w * 0.22, BEAM_LEN, 20, 1, true]} />
+          {/* beam: a cone with its point at the window, spreading as it travels out */}
+          {/* the whole beam is angled slightly upward, the way a counter scanner sits */}
+          <group ref={beamRigRef} rotation={[-0.16, 0, 0]}>
+          <mesh ref={beamRef} geometry={beamGeometry} position={[0, 0, BEAM_LEN / 2 - SCANNER_DEPTH / 2]} visible={false}>
             <meshBasicMaterial
-              color={BRAND.red}
+              vertexColors
               transparent
               opacity={0}
               depthWrite={false}
               blending={THREE.AdditiveBlending}
               side={THREE.DoubleSide}
-              toneMapped={false}
             />
-          </mesh>
-          {/* the read line the beam paints on whatever is held in front of it */}
-          <mesh ref={beamLineRef} position={[0, 0, BEAM_LEN * 0.55]} visible={false}>
-            <planeGeometry args={[M.scannerBox.w * 1.35, 0.006]} />
-            <meshBasicMaterial color="#ff4a3d" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
           </mesh>
           <spotLight
             ref={beamLightRef}
             position={[0, 0, 0.02]}
-            color={BRAND.red}
+            color={BEAM_COLOR}
             angle={0.5}
             penumbra={0.7}
             distance={1.4}
@@ -462,9 +502,10 @@ export function Kiosk({
             intensity={0}
           />
           <object3D ref={beamTargetRef} position={[0, 0, 1]} />
+          </group>
           <mesh ref={scanRef} position={[0, 0, -SCANNER_DEPTH + 0.002]}>
             <planeGeometry args={[M.scannerBox.w * 0.24, M.scannerBox.h * 0.24]} />
-            <meshStandardMaterial color="#2a0d0c" emissive={BRAND.red} emissiveIntensity={0.3} toneMapped={false} />
+            <meshStandardMaterial color="#16281f" emissive={BEAM_COLOR} emissiveIntensity={0.3} />
           </mesh>
         </group>
         </>
@@ -474,7 +515,7 @@ export function Kiosk({
         <>
   {/* print slots, side by side as on the built machine: sticker (left), receipt (right) */}
         {[M.stickerSlot, M.receiptSlot].map((slot, i) => (
-          <group key={i} position={[slot.x, slot.y, d / 2 + 0.004]}>
+          <group key={i} position={[slot.x, slot.y, d / 2 + 0.011]}>
             <mesh>
               <planeGeometry args={[slot.w, slot.h]} />
               <meshStandardMaterial color="#0d1015" roughness={0.9} />
@@ -487,7 +528,7 @@ export function Kiosk({
         ))}
 
         {/* the label being printed, extruding from the sticker slot */}
-        <group ref={printRef} position={[M.stickerSlot.x, M.stickerSlot.y, d / 2 + 0.008]} visible={false}>
+        <group ref={printRef} position={[M.stickerSlot.x, M.stickerSlot.y, d / 2 + 0.016]} visible={false}>
           <mesh>
             <planeGeometry args={[M.stickerSlot.w * 0.92, 0.075]} />
             <meshStandardMaterial color="#fdfdfd" roughness={0.75} side={THREE.DoubleSide} />
@@ -525,7 +566,7 @@ export function Kiosk({
             <meshStandardMaterial color="#646d79" roughness={0.75} metalness={0.05} />
           </mesh>
           {/* shelf the packages sit on, lifted off the bay floor */}
-          <mesh position={[0, -M.pickup.h / 2 + 0.045, 0.01]} receiveShadow castShadow>
+          <mesh position={[0, -M.pickup.h / 2 + BAY_SHELF_RISE, 0.01]} receiveShadow castShadow>
             <boxGeometry args={[M.pickup.w * 0.94, 0.014, BAY_DEPTH * 0.82]} />
             <meshStandardMaterial color="#aab3bf" roughness={0.5} metalness={0.15} />
           </mesh>
@@ -533,20 +574,20 @@ export function Kiosk({
               point light, both driven by how far the shutter has opened */}
           <mesh ref={bayGlowRef} position={[0, M.pickup.h / 2 - 0.012, 0.01]} rotation={[Math.PI / 2, 0, 0]}>
             <planeGeometry args={[M.pickup.w * 0.8, BAY_DEPTH * 0.5]} />
-            <meshStandardMaterial color="#ffffff" emissive="#eaf6ff" emissiveIntensity={0.25} toneMapped={false} />
+            <meshStandardMaterial color="#ffffff" emissive="#eaf6ff" emissiveIntensity={0.25} />
           </mesh>
           <pointLight
             ref={bayLightRef}
             position={[0, M.pickup.h / 2 - 0.05, 0.02]}
             color="#e8f4ff"
             intensity={0.15}
-            distance={0.9}
+            distance={1.3}
             decay={2}
           />
         </group>
 
         {/* dark gasket around the mouth, so the cut in the fascia reads as an edge */}
-        <group position={[M.pickup.x, M.pickup.y, d / 2 + 0.001]}>
+        <group position={[M.pickup.x, M.pickup.y, d / 2 + 0.007]}>
           {([-1, 1] as const).map((sx) => (
             <mesh key={`v${sx}`} position={[(sx * M.pickup.w) / 2, 0, 0]}>
               <planeGeometry args={[0.012, M.pickup.h + 0.012]} />
