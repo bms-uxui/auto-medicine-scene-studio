@@ -30,7 +30,7 @@ export function Inspector() {
         options: { 'ไทย': 'th', English: 'en' },
         onChange: (v: 'th' | 'en') => useStudio.getState().set('lang', v),
       },
-      speed: { value: 1, min: 0.1, max: 3, step: 0.1, onChange: (v: number) => useStudio.getState().set('speed', v) },
+      speed: { value: 0.7, min: 0.1, max: 3, step: 0.1, onChange: (v: number) => useStudio.getState().set('speed', v) },
       loop: { value: true, onChange: (v: boolean) => useStudio.getState().set('loop', v) },
       helpers: { value: false, onChange: (v: boolean) => useStudio.getState().set('showHelpers', v) },
       overlay: { value: true, onChange: (v: boolean) => useStudio.getState().set('showOverlay', v) },

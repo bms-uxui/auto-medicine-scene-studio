@@ -5,6 +5,23 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { BRAND } from './textures'
 import { textureFromImage } from './artTexture'
 
+/**
+ * Channels a prop reads every frame.
+ *
+ * They cannot be plain props: the timeline drives the scene through refs and never
+ * re-renders during playback, so a prop read at render time is whatever it was when React
+ * last committed — the lid would only move when something else happened to cause a
+ * render, such as hitting pause.
+ */
+export interface PropDynamic {
+  /** 0 = flat on its backing, 1 = fully peeled */
+  curl?: number
+  /** 0 = lid on, 1 = lid lifted clear */
+  open?: number
+  /** >= 0.5 = the case no longer holds a carton */
+  empty?: number
+}
+
 function labelTexture(lines: string[], accent = BRAND.blue) {
   const canvas = document.createElement('canvas')
   canvas.width = 512
@@ -34,7 +51,7 @@ function labelTexture(lines: string[], accent = BRAND.blue) {
  * and strength, then the dosage in capitals — matching the printed slip the client
  * photographed. Portrait-printed on a landscape sticker, so the text runs across it.
  */
-function stickerTexture() {
+export function stickerTexture() {
   const canvas = document.createElement('canvas')
   canvas.width = 1024
   canvas.height = 620
@@ -137,7 +154,7 @@ export function MedicinePackage(props: React.ComponentProps<'group'>) {
   const D = 0.034
   return (
     <group {...props}>
-      <RoundedBox args={[W, H, D]} radius={0.0035} smoothness={4} castShadow receiveShadow>
+      <RoundedBox args={[W, H, D]} radius={0.0035} smoothness={4} receiveShadow>
         <meshStandardMaterial color="#e9eef4" roughness={0.62} metalness={0} />
       </RoundedBox>
       {/* printed faces, a hair proud of the carton so they never z-fight */}
@@ -163,7 +180,7 @@ export function MedicineBox(props: React.ComponentProps<'group'>) {
   const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Take 1 tablet after meals', 'Qty 30'], BRAND.blue), [])
   return (
     <group {...props}>
-      <RoundedBox args={[0.11, 0.16, 0.05]} radius={0.006} smoothness={3} castShadow receiveShadow>
+      <RoundedBox args={[0.11, 0.16, 0.05]} radius={0.006} smoothness={3} receiveShadow>
         <meshStandardMaterial color="#ffffff" roughness={0.55} />
       </RoundedBox>
       <mesh position={[0, 0, 0.0255]}>
@@ -175,25 +192,34 @@ export function MedicineBox(props: React.ComponentProps<'group'>) {
 }
 
 /** Peel-off medicine sticker used in the "apply the sticker" beat. */
-export function Sticker({ curl = 0, ...props }: { curl?: number } & React.ComponentProps<'group'>) {
+export function Sticker({ dyn, ...props }: { dyn?: React.RefObject<PropDynamic> } & React.ComponentProps<'group'>) {
   const label = useMemo(() => stickerTexture(), [])
   const geo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.061, 24, 4), [])
-  const bent = useMemo(() => {
-    const g = geo.clone()
-    const pos = g.attributes.position as THREE.BufferAttribute
+  /** the flat sheet the curl is measured from */
+  const flat = useMemo(() => (geo.attributes.position as THREE.BufferAttribute).clone(), [geo])
+  const applied = useRef(-1)
+  useEffect(() => () => geo.dispose(), [geo])
+
+  // peeling is animated on the timeline, so it has to be written per frame rather than
+  // rebuilt on render — nothing re-renders while the scene plays
+  useFrame(() => {
+    const curl = THREE.MathUtils.clamp(dyn?.current?.curl ?? 0, 0, 1)
+    if (Math.abs(curl - applied.current) < 0.001) return
+    applied.current = curl
+    const pos = geo.attributes.position as THREE.BufferAttribute
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
+      const x = flat.getX(i)
       const u = (x + 0.05) / 0.1
-      pos.setZ(i, Math.pow(u, 2) * curl * 0.06)
       pos.setX(i, x - Math.pow(u, 2) * curl * 0.02)
+      pos.setZ(i, Math.pow(u, 2) * curl * 0.06)
     }
     pos.needsUpdate = true
-    g.computeVertexNormals()
-    return g
-  }, [geo, curl])
+    geo.computeVertexNormals()
+  })
+
   return (
     <group {...props}>
-      <mesh geometry={bent} castShadow>
+      <mesh geometry={geo}>
         <meshStandardMaterial map={label} side={THREE.DoubleSide} roughness={0.5} />
       </mesh>
     </group>
@@ -204,7 +230,7 @@ export function Sticker({ curl = 0, ...props }: { curl?: number } & React.Compon
 export function Phone({ screen, ...props }: { screen?: THREE.Texture } & React.ComponentProps<'group'>) {
   return (
     <group {...props}>
-      <RoundedBox args={[0.075, 0.155, 0.009]} radius={0.008} smoothness={4} castShadow>
+      <RoundedBox args={[0.075, 0.155, 0.009]} radius={0.008} smoothness={4}>
         <meshStandardMaterial color="#1b1f27" roughness={0.35} metalness={0.6} />
       </RoundedBox>
       <mesh position={[0, 0, 0.005]}>
@@ -248,7 +274,7 @@ export function QrCard(props: React.ComponentProps<'group'>) {
   }, [])
   return (
     <group {...props}>
-      <mesh castShadow>
+      <mesh>
         <boxGeometry args={[0.09, 0.12, 0.001]} />
         <meshStandardMaterial color="#ffffff" roughness={0.8} />
       </mesh>
@@ -320,93 +346,223 @@ export function MedicineBoxArt(props: React.ComponentProps<'group'>) {
 
 
 /**
- * The clear slim case the machine actually stores medicine in — the numbered channels in
- * the client's photo of the cabinet interior are full of these. The carton rides inside
- * it, and the patient has to hand the case back once the medicine is out.
+ * The clear case the medicine is dispensed in: a shallow landscape box with a solid base
+ * and a lid hinged along its back edge, the way a bakery box opens. The carton lies flat
+ * inside it, so lifting the medicine out is a straight vertical move that never passes
+ * through a wall.
  */
-export function PlasticCase({ open = 0, empty = 0, ...props }: { open?: number; empty?: number } & React.ComponentProps<'group'>) {
-  const W = 0.078
-  const H = 0.138
-  const D = 0.036
+export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynamic> } & React.ComponentProps<'group'>) {
+  const lid = useRef<THREE.Group>(null)
+  const inner = useRef<THREE.Group>(null)
+  useFrame(() => {
+    const open = THREE.MathUtils.clamp(dyn?.current?.open ?? 0, 0, 1)
+    if (lid.current) {
+      // two readable phases: a decisive straight lift well clear of the box, then a
+      // slide aside — solid through the lift so the action cannot be missed
+      const lift = THREE.MathUtils.smoothstep(open, 0, 0.55)
+      const drift = THREE.MathUtils.smoothstep(open, 0.55, 1)
+      lid.current.position.set(-drift * 0.11, lift * 0.085 + drift * 0.03, -drift * 0.02)
+      lid.current.rotation.z = drift * 0.22
+      // it only starts to dissolve once it is moving aside, not during the lift
+      const fade = 1 - THREE.MathUtils.smoothstep(open, 0.75, 1)
+      lid.current.visible = fade > 0.01
+      lid.current.traverse((child) => {
+        const mesh = child as THREE.Mesh
+        if (!mesh.isMesh) return
+        const mat = mesh.material as THREE.MeshStandardMaterial
+        if (mat.userData.lidBase === undefined) mat.userData.lidBase = mat.opacity
+        mat.transparent = true
+        // publish through baseOpacity so the actor-level fade in SceneRuntime
+        // multiplies on top of this instead of fighting the write
+        const faded = (mat.userData.lidBase as number) * fade
+        mat.userData.baseOpacity = faded
+        mat.opacity = faded
+      })
+    }
+    if (inner.current) inner.current.visible = (dyn?.current?.empty ?? 0) < 0.5
+  })
+  const W = 0.168
+  const D = 0.104
+  const H = 0.05
+  /** how deep the lid's skirt comes down over the base */
+  const LIP = 0.014
   const shell = (
+    // low roughness on a plane tilting up into the overhead lightformer threw a hard
+    // blown-out highlight across the lid right as it lifts into a close shot
     <meshStandardMaterial
-      color="#eaf2f7"
+      color="#d9e6ee"
       transparent
-      opacity={0.34}
-      roughness={0.12}
+      opacity={0.5}
+      roughness={0.6}
       metalness={0}
+      side={THREE.DoubleSide}
       depthWrite={false}
     />
   )
   return (
     <group {...props}>
-      {/* body: four walls and a floor, left open at the top so the carton can lift out */}
-      <mesh position={[0, 0, -D / 2]}>
-        <planeGeometry args={[W, H]} />
-        {shell}
+      {/* base */}
+      <mesh position={[0, -H / 2, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color="#e3edf3" transparent opacity={0.5} roughness={0.2} side={THREE.DoubleSide} />
       </mesh>
+      {/* long walls */}
       {([1, -1] as const).map((side) => (
-        <mesh key={side} position={[(side * W) / 2, 0, 0]} rotation={[0, (side * Math.PI) / 2, 0]}>
+        <mesh key={`z${side}`} position={[0, 0, (side * D) / 2]}>
+          <planeGeometry args={[W, H]} />
+          {shell}
+        </mesh>
+      ))}
+      {/* short walls */}
+      {([1, -1] as const).map((side) => (
+        <mesh key={`x${side}`} position={[(side * W) / 2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[D, H]} />
           {shell}
         </mesh>
       ))}
-      <mesh position={[0, -H / 2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[W, D]} />
-        {shell}
-      </mesh>
-      {/* front face, hinged at the foot so it can drop open */}
-      <group position={[0, -H / 2, D / 2]} rotation={[-open * 1.5, 0, 0]}>
-        <mesh position={[0, H / 2, 0]}>
-          <planeGeometry args={[W, H]} />
+      {/*
+        Lid: a cover that lifts straight off, not a hinged flap — a shallow tray of its
+        own that sits over the rim of the base and rises clear of it.
+      */}
+      <group ref={lid}>
+        <mesh position={[0, H / 2 + LIP, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[W + 0.004, D + 0.004]} />
           {shell}
         </mesh>
-        {/* the printed channel label, as on every case in the cabinet */}
-        <mesh position={[0, H * 0.36, 0.0006]}>
-          <planeGeometry args={[W * 0.5, H * 0.12]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.85} />
+        {/* the cover's own skirt, so it reads as a cap rather than a floating sheet */}
+        {([1, -1] as const).map((side) => (
+          <mesh key={`lz${side}`} position={[0, H / 2 + LIP / 2, (side * (D + 0.004)) / 2]}>
+            <planeGeometry args={[W + 0.004, LIP]} />
+            {shell}
+          </mesh>
+        ))}
+        {([1, -1] as const).map((side) => (
+          <mesh key={`lx${side}`} position={[(side * (W + 0.004)) / 2, H / 2 + LIP / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[D + 0.004, LIP]} />
+            {shell}
+          </mesh>
+        ))}
+        {/* the printed channel label sits on the lid */}
+        <mesh position={[W * 0.28, H / 2 + LIP + 0.0006, D * 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[W * 0.3, D * 0.34]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
         </mesh>
       </group>
-      {/* the carton rides inside until the patient lifts it out */}
-      {empty < 0.5 && <MedicinePackage scale={0.92} />}
+      {/* the medicine lies flat on the base until it is lifted out */}
+      <group ref={inner}>
+        <MedicinePackage rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[0, -H / 2 + 0.019, 0]} />
+      </group>
       {/* a hint of an edge so the clear plastic reads against a pale cabinet */}
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(W, H, D)]} />
-        <lineBasicMaterial color="#9fb4c2" transparent opacity={0.55} />
+        <lineBasicMaterial color="#9fb4c2" transparent opacity={0.5} />
       </lineSegments>
+    </group>
+  )
+}
+
+/** Small side table next to the kiosk that the return basket sits on. */
+export function SideTable(props: React.ComponentProps<'group'>) {
+  const W = 0.52
+  const D = 0.42
+  const H = 0.72
+  const T = 0.035
+  const legIn = 0.05
+  return (
+    <group {...props}>
+      <RoundedBox args={[W, T, D]} radius={0.008} smoothness={3} position={[0, H - T / 2, 0]} receiveShadow>
+        <meshStandardMaterial color="#f2f5f8" roughness={0.5} metalness={0} />
+      </RoundedBox>
+      {([-1, 1] as const).map((sx) =>
+        ([-1, 1] as const).map((sz) => (
+          <mesh key={`${sx}${sz}`} position={[sx * (W / 2 - legIn), (H - T) / 2, sz * (D / 2 - legIn)]}>
+            <boxGeometry args={[0.03, H - T, 0.03]} />
+            <meshStandardMaterial color="#c3ced9" roughness={0.55} metalness={0.1} />
+          </mesh>
+        )),
+      )}
+      {/* a low stretcher so the legs read as one piece of furniture */}
+      <mesh position={[0, 0.14, 0]}>
+        <boxGeometry args={[W - legIn * 2, 0.024, 0.03]} />
+        <meshStandardMaterial color="#c3ced9" roughness={0.55} metalness={0.1} />
+      </mesh>
     </group>
   )
 }
 
 /** Basket by the kiosk where the empty cases are returned. */
 export function ReturnBasket(props: React.ComponentProps<'group'>) {
-  const W = 0.24
-  const H = 0.1
-  const D = 0.17
-  const wall = <meshStandardMaterial color="#bcd3de" roughness={0.5} metalness={0} side={THREE.DoubleSide} />
+  // IKEA-style storage crate: tapered open basket with slatted sides under a solid rim
+  const WB = 0.34
+  const DB = 0.25
+  const WT = 0.39
+  const DT = 0.28
+  const H = 0.15
+  const RIM = 0.028
+  /** a couple of cases other patients have already returned */
+  const returned = useRef<PropDynamic>({ empty: 1, open: 0.05 })
+  const lean = { x: Math.atan(((DT - DB) / 2) / H), z: Math.atan(((WT - WB) / 2) / H) }
+  const plastic = <meshStandardMaterial color="#f2f5f7" roughness={0.45} metalness={0} />
+  const slats = (count: number, width: number, along: 'x' | 'z') => {
+    const span = (along === 'x' ? WB : DB) - 0.03
+    return Array.from({ length: count }, (_, i) => {
+      const t = count === 1 ? 0 : i / (count - 1)
+      return (t - 0.5) * span
+    }).map((off, i) => ({ off, key: `${along}${i}`, width }))
+  }
   return (
     <group {...props}>
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[W, D]} />
-        {wall}
+      {/* solid base */}
+      <mesh position={[0, 0.005, 0]} receiveShadow>
+        <boxGeometry args={[WB, 0.01, DB]} />
+        {plastic}
       </mesh>
-      {([1, -1] as const).map((s) => (
-        <mesh key={`x${s}`} position={[(s * W) / 2, H / 2, 0]} rotation={[0, (s * Math.PI) / 2, 0]}>
-          <planeGeometry args={[D, H]} />
-          {wall}
+      {/* slatted long sides, leaning out to meet the wider rim */}
+      {([1, -1] as const).map((side) =>
+        slats(10, 0.017, 'x').map(({ off, key, width }) => (
+          <mesh
+            key={`l${side}${key}`}
+            position={[off, (H - RIM) / 2 + 0.01, side * ((DB + (DT - DB) * 0.5) / 2)]}
+            rotation={[-side * lean.x, 0, 0]}
+          >
+            <boxGeometry args={[width, H - RIM, 0.008]} />
+            {plastic}
+          </mesh>
+        )),
+      )}
+      {/* slatted short sides */}
+      {([1, -1] as const).map((side) =>
+        slats(7, 0.017, 'z').map(({ off, key, width }) => (
+          <mesh
+            key={`s${side}${key}`}
+            position={[side * ((WB + (WT - WB) * 0.5) / 2), (H - RIM) / 2 + 0.01, off]}
+            rotation={[0, Math.PI / 2, side * lean.z]}
+          >
+            <boxGeometry args={[width, H - RIM, 0.008]} />
+            {plastic}
+          </mesh>
+        )),
+      )}
+      {/* solid rim band around the open top */}
+      {([1, -1] as const).map((side) => (
+        <mesh key={`rz${side}`} position={[0, H - RIM / 2, (side * DT) / 2]}>
+          <boxGeometry args={[WT + 0.012, RIM, 0.012]} />
+          {plastic}
         </mesh>
       ))}
-      {([1, -1] as const).map((s) => (
-        <mesh key={`z${s}`} position={[0, H / 2, (s * D) / 2]}>
-          <planeGeometry args={[W, H]} />
-          {wall}
+      {([1, -1] as const).map((side) => (
+        <mesh key={`rx${side}`} position={[(side * WT) / 2, H - RIM / 2, 0]}>
+          <boxGeometry args={[0.012, RIM, DT + 0.012]} />
+          {plastic}
         </mesh>
       ))}
-      {/* rim, so the open top reads as a lip rather than a cut edge */}
-      <mesh position={[0, H, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0, 0.001, 4]} />
-        <meshBasicMaterial color="#9fb4c2" />
-      </mesh>
+      {/* cases already returned by earlier patients, stacked neatly side by side */}
+      <group position={[0, 0.036, 0.058]}>
+        <PlasticCase dyn={returned} />
+      </group>
+      <group position={[0, 0.036, -0.058]}>
+        <PlasticCase dyn={returned} />
+      </group>
     </group>
   )
 }
@@ -414,6 +570,7 @@ export function ReturnBasket(props: React.ComponentProps<'group'>) {
 export const PROP_COMPONENTS = {
   plasticCase: PlasticCase,
   returnBasket: ReturnBasket,
+  sideTable: SideTable,
   medicinePackage: MedicinePackage,
   medicineBoxArt: MedicineBoxArt,
   medicineBox: MedicineBox,

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBox, useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { BRAND } from './textures'
 import { KioskScreen, type ScreenDynamic, type ScreenState } from './KioskScreen'
 import { GroundBlob } from './GroundBlob'
+import { stickerTexture } from './Props'
 import { BAY_DEPTH, BAY_SHELF_RISE, computeAnchors, computeMetrics, type KioskLayout, type KioskMetrics } from './kioskLayout'
 import { DEFAULT_LIVERY, type Livery, type UvWindow } from './liveries'
 
@@ -112,6 +112,7 @@ export function Kiosk({
   const beamRigRef = useRef<THREE.Group>(null)
   const camRef = useRef<THREE.Mesh>(null)
   const printRef = useRef<THREE.Group>(null)
+  const printMap = useMemo(() => stickerTexture(), [])
   const elapsed = useRef(0)
 
   /** a panel shows its window of the sheet, so one wrap can cover several faces */
@@ -311,10 +312,11 @@ export function Kiosk({
     const open = THREE.MathUtils.clamp(d0.doorOpen ?? cfg.doorOpen, 0, 1)
     // the shutter drops straight down and disappears behind the fascia
     if (doorRef.current) doorRef.current.position.y = -open * (M.pickup.h + 0.012)
-    if (bayLightRef.current) bayLightRef.current.intensity = 0.08 + open * 1.15
+    // the recess is tiny (~30cm) — the old max (1.23 / 2.1) blew the case out pure white
+    if (bayLightRef.current) bayLightRef.current.intensity = 0.04 + open * 0.12
     if (bayGlowRef.current) {
       const m = bayGlowRef.current.material as THREE.MeshStandardMaterial
-      m.emissiveIntensity = 0.2 + open * 1.9
+      m.emissiveIntensity = 0.08 + open * 0.18
     }
     const scan = THREE.MathUtils.clamp(d0.scanGlow ?? cfg.scanGlow, 0, 1)
     if (scanRef.current) {
@@ -337,8 +339,13 @@ export function Kiosk({
       beamRef.current.visible = scan > 0.01
       const m = beamRef.current.material as THREE.MeshBasicMaterial
       const want = scan * 0.3 * flicker
-      // on a timeline the value is exact, so the same frame always renders the same
-      m.opacity = d0.time === undefined ? THREE.MathUtils.damp(m.opacity, want, 9, dt) : want
+      // on a timeline the value is exact, so the same frame always renders the same.
+      // Damp against our own last ask (baseOpacity), not mat.opacity — the actor fade
+      // multiplies into mat.opacity after us and must not feed back into the damp.
+      const cur = (m.userData.baseOpacity as number | undefined) ?? m.opacity
+      const next = d0.time === undefined ? THREE.MathUtils.damp(cur, want, 9, dt) : want
+      m.userData.baseOpacity = next
+      m.opacity = next
     }
     if (beamLightRef.current) {
       // a spot light aims at its target object, which has to live in the scene graph
@@ -356,7 +363,8 @@ export function Kiosk({
       const feed = THREE.MathUtils.clamp(d0.stickerFeed ?? cfg.stickerFeed, 0, 1)
       printRef.current.visible = feed > 0.001
       printRef.current.scale.set(1, feed, 1)
-      printRef.current.position.y = M.stickerSlot.y - (feed * 0.075) / 2
+      const printH = M.stickerSlot.w * 0.92 * (620 / 1024)
+      printRef.current.position.y = M.stickerSlot.y - (feed * printH) / 2
     }
   })
 
@@ -527,15 +535,11 @@ export function Kiosk({
           </group>
         ))}
 
-        {/* the label being printed, extruding from the sticker slot */}
+        {/* the label being printed: the real pharmacy sticker, emerging print-side out */}
         <group ref={printRef} position={[M.stickerSlot.x, M.stickerSlot.y, d / 2 + 0.016]} visible={false}>
           <mesh>
-            <planeGeometry args={[M.stickerSlot.w * 0.92, 0.075]} />
-            <meshStandardMaterial color="#fdfdfd" roughness={0.75} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 0, 0.001]}>
-            <planeGeometry args={[M.stickerSlot.w * 0.7, 0.01]} />
-            <meshStandardMaterial color={BRAND.blue} roughness={0.7} />
+            <planeGeometry args={[M.stickerSlot.w * 0.92, M.stickerSlot.w * 0.92 * (620 / 1024)]} />
+            <meshStandardMaterial map={printMap} roughness={0.75} side={THREE.DoubleSide} />
           </mesh>
         </group>
         </>

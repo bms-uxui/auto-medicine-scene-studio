@@ -1,7 +1,8 @@
 import type { SceneDef } from '../anim/types'
 import { patientScanQr } from './patientScanQr'
-import { patientCollect } from './patientCollect'
+import { patientCollectOpd } from './patientCollectOpd'
+import { patientCollectIpd } from './patientCollectIpd'
 import { staffScan } from './staffScan'
 
-export const SCENES: SceneDef[] = [patientScanQr, patientCollect, staffScan]
-export { patientScanQr, patientCollect, staffScan }
+export const SCENES: SceneDef[] = [patientScanQr, patientCollectOpd, patientCollectIpd, staffScan]
+export { patientScanQr, patientCollectOpd, patientCollectIpd, staffScan }

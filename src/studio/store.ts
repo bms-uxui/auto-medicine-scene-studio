@@ -81,7 +81,8 @@ export const useStudio = create<StudioState>((set, get) => ({
   time: 0,
   playing: false,
   loop: true,
-  speed: 1,
+  // review pace: the clip reads better a little under real time
+  speed: 0.7,
   selection: null,
   showHelpers: false,
   showOverlay: true,

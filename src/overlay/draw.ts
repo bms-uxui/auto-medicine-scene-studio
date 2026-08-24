@@ -1,7 +1,8 @@
 import type { SceneDef, Step } from '../anim/types'
 
 /**
- * Frame layout copied from the Figma reference (node 1:54559, "Camera Position - 7").
+ * Frame layout copied from the Figma reference (node 1:54559, "Camera Position - 7");
+ * the step rail matches node 1:60797, icons and all.
  * Everything is expressed in that frame's 1080x683 units and scaled to the render size.
  */
 export const LAYOUT = {
@@ -9,7 +10,9 @@ export const LAYOUT = {
   rail: { x: 64, y: 64, w: 173, h: 555, radius: 24 },
   card: { x: 261, y: 64, w: 755, h: 555, radius: 24 },
   /** icon + label placement inside a chip, as a fraction of chip height */
-  chip: { iconCenter: 0.4288, labelCenter: 0.5928, iconSize: 40, labelSize: 21 },
+  // measured off node 1:60797: a 138.75-tall row with the icon at y=30..70 and the
+  // label at y=82..109, so the two never touch
+  chip: { iconCenter: 0.3604, labelCenter: 0.6883, iconSize: 40, labelSize: 21 },
 } as const
 
 const COLOR = {
@@ -27,10 +30,10 @@ const ICONS: Record<Step['icon'], string> = {
   camera: '/icons/photo_camera.svg',
   barcode: '/icons/barcode_scanner.svg',
   qr: '/icons/barcode_scanner.svg',
-  box: '/icons/move_to_inbox.svg',
-  sticker: '/icons/note_stack.svg',
-  apply: '/icons/task_alt.svg',
-  continue: '/icons/forward_to_inbox.svg',
+  box: '/icons/archive.svg',
+  sticker: '/icons/sticky_note.svg',
+  apply: '/icons/note_stack.svg',
+  continue: '/icons/content_paste_go.svg',
 }
 
 const iconCache = new Map<string, HTMLImageElement>()

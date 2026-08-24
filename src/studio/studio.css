@@ -107,3 +107,30 @@ main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
 .key:hover { background: var(--accent); }
 
 .toolbar .link { color: var(--accent); text-decoration: none; padding: 0 6px; }
+
+/* ---- review mode: the frame alone, at display size ---- */
+.studio.theater { grid-template-rows: 1fr; background: #000; }
+.studio.theater .toolbar,
+.studio.theater .panel,
+.studio.theater .timeline,
+.studio.theater .actors { display: none; }
+.studio.theater main { grid-template-columns: 1fr; }
+.studio.theater .stage { padding: 0; }
+.studio.theater .viewport {
+  width: auto; height: 100%; max-width: 100%; max-height: 100%;
+  border-radius: 0; box-shadow: none;
+}
+
+.theater-bar {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  display: flex; gap: 8px; align-items: center;
+  padding: 8px 12px; border-radius: 12px;
+  background: rgb(20 23 28 / 0.82); border: 1px solid #333c48;
+  backdrop-filter: blur(8px);
+  color: var(--ink); z-index: 20;
+  transition: opacity 0.25s ease;
+}
+.theater-bar.idle { opacity: 0; pointer-events: none; }
+.theater-bar .scrub { width: min(46vw, 560px); accent-color: var(--accent); }
+.theater-bar .clock { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 118px; }
+.theater-bar .beat { color: #f9b57a; max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

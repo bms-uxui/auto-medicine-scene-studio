@@ -14,7 +14,7 @@ import { Staff3D, type StaffDynamic } from './Staff3D'
 import { CutoutRig, type CutoutRigDynamic } from './CutoutRig'
 import { CUTOUT_RIGS } from './cutoutRigs'
 import { ActorErrorBoundary } from '../studio/ErrorBoundary'
-import { PROP_COMPONENTS, type PropPrimitive } from './Props'
+import { PROP_COMPONENTS, type PropDynamic, type PropPrimitive } from './Props'
 import { StudioStage } from './Stage'
 
 const FrameCtx = createContext<{ current: SampledFrame }>({ current: {} })
@@ -40,12 +40,38 @@ function applyCommon(obj: THREE.Object3D | null, actor: ActorDef, values: Record
     obj.traverse((child) => {
       const mesh = child as THREE.Mesh
       if (!mesh.isMesh) return
+      // the shadow pass ignores opacity, so a faded-out actor would still throw its
+      // shadow across the floor of the demonstration — stop casting once it is gone
+      if (mesh.userData.baseCastShadow === undefined) mesh.userData.baseCastShadow = mesh.castShadow
+      mesh.castShadow = (mesh.userData.baseCastShadow as boolean) && opacity > 0.05
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       for (const m of materials) {
         const mat = m as THREE.MeshStandardMaterial
-        mat.transparent = opacity < 0.999
-        mat.opacity = opacity
-        mat.depthWrite = opacity > 0.99
+        // Fading an actor scales what the material asks for rather than replacing
+        // it. The material's own ask lives in userData.baseOpacity: captured once from
+        // the authored material, and kept up to date by anything that animates its own
+        // opacity per frame (the scan beam, the case lid) — those writers update
+        // baseOpacity rather than fighting over mat.opacity. The old handshake compared
+        // mat.opacity against the last value written here; one missed frame made base
+        // undefined, and the resulting NaN survived forever because NaN !== NaN.
+        if (mat.userData.baseOpacity === undefined) {
+          mat.userData.baseOpacity = mat.opacity
+          mat.userData.baseTransparent = mat.transparent
+          mat.userData.baseDepthWrite = mat.depthWrite
+        }
+        const base = mat.userData.baseOpacity as number
+        mat.opacity = base * opacity
+        const wantTransparent =
+          (mat.userData.baseTransparent as boolean) || opacity < 0.999 || base < 0.999
+        if (mat.transparent !== wantTransparent) {
+          // three only honours a changed transparent flag after a rebuild; without this
+          // the material stays in the opaque pass and renders solid at opacity 0
+          mat.transparent = wantTransparent
+          mat.needsUpdate = true
+        }
+        mat.depthWrite = (mat.userData.baseTransparent as boolean)
+          ? (mat.userData.baseDepthWrite as boolean)
+          : opacity > 0.99
       }
     })
   }
@@ -218,6 +244,9 @@ function StaffActor({ actor }: { actor: ActorDef }) {
 
 function PropActor({ actor }: { actor: ActorDef }) {
   const ref = useRegister(actor.id)
+  // peel, lid and emptiness are read per frame: nothing re-renders during playback, so a
+  // value read at render time would only update when something else forced a commit
+  const dyn = useRef<PropDynamic>({})
   const frame = useSampledFrame()
   const registry = useStudio((s) => s.registry)
   const Comp = PROP_COMPONENTS[(actor.primitive ?? 'medicineBox') as PropPrimitive]
@@ -227,6 +256,11 @@ function PropActor({ actor }: { actor: ActorDef }) {
   useFrame(() => {
     const values = frame.current[actor.id]
     applyCommon(ref.current, actor, values)
+    dyn.current = {
+      curl: values?.['custom:curl'] as number | undefined,
+      open: values?.['custom:open'] as number | undefined,
+      empty: values?.['custom:empty'] as number | undefined,
+    }
     // `attachTo` names something in the registry — a character's hand, say — and the
     // prop rides it, with its own position track read as an offset from that point
     const attach = (values?.['custom:attachTo'] as string) ?? (actor.params?.attachTo as string | undefined)
@@ -247,12 +281,9 @@ function PropActor({ actor }: { actor: ActorDef }) {
     }
   })
   // the sticker reads its peel from the timeline; other primitives ignore it
-  const curl = (frame.current[actor.id]?.['custom:curl'] as number) ?? 0
-  // the plastic case reads its lid from the same channel mechanism
-  const open = (frame.current[actor.id]?.['custom:open'] as number) ?? 0
   return (
     <group ref={ref}>
-      <Comp curl={curl} open={open} empty={(frame.current[actor.id]?.['custom:empty'] as number) ?? 0} />
+      <Comp dyn={dyn} />
     </group>
   )
 }
