@@ -207,3 +207,9 @@ export const useStudio = create<StudioState>((set, get) => ({
 }))
 
 export const selectScene = (s: StudioState) => s.scenes.find((sc) => sc.id === s.sceneId) ?? s.scenes[0]
+
+// A handle on the store for headless checks: a scripted browser can select a scene and
+// step the timeline the way the exporter does, instead of driving the UI. Dev only.
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__studio = useStudio
+}

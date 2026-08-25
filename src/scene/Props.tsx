@@ -146,14 +146,26 @@ function cartonTexture(name: string, strength: string) {
  * and back, the blue of the artwork wrapping the sides, and a soft edge so it catches
  * the studio light like a physical box.
  */
-export function MedicinePackage(props: React.ComponentProps<'group'>) {
+/**
+ * @param qr the hospital's QR label printed on the front of the carton. Most items are
+ *   read through the code on their plastic case; the few that do not fit in one carry it
+ *   on the medicine itself, and those are the ones that set this.
+ */
+export function MedicinePackage({ qr, ...props }: { qr?: boolean } & React.ComponentProps<'group'>) {
   const face = useMemo(() => cartonTexture('Lorem', '100 mg'), [])
+  const code = qrTexture()
   useEffect(() => () => face.dispose(), [face])
   const W = 0.062
   const H = 0.128
   const D = 0.034
   return (
     <group {...props}>
+      {qr && (
+        <mesh position={[0, -H * 0.28, D / 2 + 0.0012]}>
+          <planeGeometry args={[W * 0.44, W * 0.44]} />
+          <meshStandardMaterial map={code} roughness={0.7} metalness={0} />
+        </mesh>
+      )}
       <RoundedBox args={[W, H, D]} radius={0.0035} smoothness={4} receiveShadow>
         <meshStandardMaterial color="#e9eef4" roughness={0.62} metalness={0} />
       </RoundedBox>
@@ -246,32 +258,43 @@ export function Phone({ screen, ...props }: { screen?: THREE.Texture } & React.C
 }
 
 /** Printed order slip with a QR code the patient holds up to the scanner. */
+/**
+ * One QR texture for the whole scene.
+ *
+ * The hospital sticks a QR code on the plastic case, and on the medicine itself for the
+ * few items that will not fit in a case, so the same code shows up on several props —
+ * building it once keeps them identical and costs one canvas instead of one per prop.
+ */
+let qrTex: THREE.CanvasTexture | null = null
+export function qrTexture() {
+  if (qrTex) return qrTex
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, 256, 256)
+  ctx.fillStyle = '#111'
+  // deterministic pseudo-QR pattern
+  let seed = 7
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+  for (let y = 0; y < 21; y++) {
+    for (let x = 0; x < 21; x++) {
+      if (rnd() > 0.5) ctx.fillRect(24 + x * 9.9, 24 + y * 9.9, 9.9, 9.9)
+    }
+  }
+  for (const [ox, oy] of [[24, 24], [154, 24], [24, 154]]) {
+    ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy, 78, 78)
+    ctx.fillStyle = '#111'; ctx.fillRect(ox, oy, 78, 78)
+    ctx.fillStyle = '#fff'; ctx.fillRect(ox + 12, oy + 12, 54, 54)
+    ctx.fillStyle = '#111'; ctx.fillRect(ox + 24, oy + 24, 30, 30)
+  }
+  qrTex = new THREE.CanvasTexture(c)
+  qrTex.colorSpace = THREE.SRGBColorSpace
+  return qrTex
+}
+
 export function QrCard(props: React.ComponentProps<'group'>) {
-  const tex = useMemo(() => {
-    const c = document.createElement('canvas')
-    c.width = c.height = 256
-    const ctx = c.getContext('2d')!
-    ctx.fillStyle = '#fff'
-    ctx.fillRect(0, 0, 256, 256)
-    ctx.fillStyle = '#111'
-    // deterministic pseudo-QR pattern
-    let seed = 7
-    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
-    for (let y = 0; y < 21; y++) {
-      for (let x = 0; x < 21; x++) {
-        if (rnd() > 0.5) ctx.fillRect(24 + x * 9.9, 24 + y * 9.9, 9.9, 9.9)
-      }
-    }
-    for (const [ox, oy] of [[24, 24], [154, 24], [24, 154]]) {
-      ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy, 78, 78)
-      ctx.fillStyle = '#111'; ctx.fillRect(ox, oy, 78, 78)
-      ctx.fillStyle = '#fff'; ctx.fillRect(ox + 12, oy + 12, 54, 54)
-      ctx.fillStyle = '#111'; ctx.fillRect(ox + 24, oy + 24, 30, 30)
-    }
-    const t = new THREE.CanvasTexture(c)
-    t.colorSpace = THREE.SRGBColorSpace
-    return t
-  }, [])
+  const tex = qrTexture()
   return (
     <group {...props}>
       <mesh>
@@ -381,6 +404,7 @@ export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynam
     }
     if (inner.current) inner.current.visible = (dyn?.current?.empty ?? 0) < 0.5
   })
+  const qr = qrTexture()
   const W = 0.168
   const D = 0.104
   const H = 0.05
@@ -442,9 +466,22 @@ export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynam
             {shell}
           </mesh>
         ))}
-        {/* the printed channel label sits on the lid */}
-        <mesh position={[W * 0.28, H / 2 + LIP + 0.0006, D * 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[W * 0.3, D * 0.34]} />
+        {/*
+          The hospital's QR label, stuck on the lid. This is what the patient holds up to
+          the scan window — the case is read before it is opened, so the code has to be on
+          the outside of the lid and large enough to survive the wide shot.
+        */}
+        <mesh position={[W * 0.24, H / 2 + LIP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[D * 0.8, D * 0.8]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[W * 0.24, H / 2 + LIP + 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[D * 0.66, D * 0.66]} />
+          <meshStandardMaterial map={qr} roughness={0.85} side={THREE.DoubleSide} />
+        </mesh>
+        {/* and the channel label beside it */}
+        <mesh position={[-W * 0.24, H / 2 + LIP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[W * 0.34, D * 0.5]} />
           <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
         </mesh>
       </group>
