@@ -189,8 +189,16 @@ export const patientCollectBottle: SceneDef = {
       // and locks that aim half a second after the reach stops changing, so a camera still
       // moving through the grab leaves the hand grasping at thin air.
       ...push.map((s) => k(s.t, shot(s.target, s.dist, 34.6, 13), s.ease)),
-      k(5.45, shot(ON_SHELF, 1.02, 34, 13), 'smooth'),
-      // out of the insert and back onto her, then across the cabinet face to the window
+      // The insert holds only as far as the moment she has hold of it. From there the
+      // camera is already on its way out, so the handover and the lift play at a size
+      // where they read as a person taking something rather than as geometry being
+      // handed between two frames of reference.
+      k(4.5, shot(ON_SHELF, 1.03, 34.6, 13), 'smooth'),
+      // Out of the insert while she still has hold of it, keeping the bay centred and
+      // swinging round to her right — pulling straight back onto her instead put her
+      // shoulder across the whole frame for a second.
+      k(5.9, shot(DOOR, 1.9, 42, 12), 'smooth'),
+      // then back onto her, and across the cabinet face to the window
       k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(7.2, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(8.0, shot(SCAN, 2.0, 40, 9), 'smooth'),
@@ -210,7 +218,8 @@ export const patientCollectBottle: SceneDef = {
     track('target', 'position', [
       k(0, FULL),
       ...push.map((s) => k(s.t, s.target, s.ease)),
-      k(5.45, ON_SHELF),
+      k(4.5, ON_SHELF),
+      k(5.9, DOOR, 'smooth'),
       k(6.7, FRONT_WIDE, 'smooth'),
       k(7.2, FRONT_WIDE),
       k(8.0, SCAN, 'smooth'),
@@ -226,7 +235,7 @@ export const patientCollectBottle: SceneDef = {
     custom('camera', 'fov', [
       // held through the push: a focal length changing under a dolly is a second move on
       // top of the first, and they do not cancel
-      k(0, 23), k(5.45, 23), k(6.7, 24, 'smooth'), k(7.2, 24),
+      k(0, 23), k(4.5, 23), k(5.9, 23, 'smooth'), k(6.7, 24, 'smooth'), k(7.2, 24),
       k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(13.4, 23, 'smooth'),
       k(14.2, 24, 'smooth'), k(16.6, 24), k(17.6, 22, 'smooth'), k(19.4, 22),
     ]),
@@ -280,7 +289,7 @@ export const patientCollectBottle: SceneDef = {
        * once the camera has pulled out again.
        */
       k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
-      k(5.5, 0.08, 'smooth'), k(6.7, 0.45, 'smooth'), k(19.4, 0.45),
+      k(5.3, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(19.4, 0.45),
     ]),
     // into the bay -> up to the scan window -> down while the sticker prints -> up to
     // the slot -> resting on the bottle
