@@ -170,12 +170,17 @@ export const patientCollectOpd: SceneDef = {
     // ---- patient ----
     track('patient', 'visible', steps([[0, false], [1.4, true]])),
     track('patient', 'position', [
-      k(1.4, [-1.5, 0, 1.95]),
-      k(3, AT_FRONT, 'smooth'),
+      // One walk, not two, and it is over before the camera goes tight. She used to be
+      // brought to a halt in front of the cabinet and then sent on to the bay — and since
+      // every key eases out to a stop, that read as a stop and a lurch. What was left of
+      // the second move then played out under the insert framing, where a few centimetres
+      // fill a third of the frame, so she appeared to be yanked into shot.
+      //
       // She steps right up to the bay for the grab. The rig only swings the arm about the
       // shoulder — it cannot lengthen it — so where the hand lands is set by how close she
       // is standing, and from her talking distance the fingers stopped short of the shelf.
-      k(3.4, AT_BAY, 'smooth'),
+      k(1.4, [-1.5, 0, 1.95], 'smooth'),
+      k(3.0, AT_BAY, 'smooth'),
       k(4.4, AT_BAY),
       k(4.9, AT_BAY),
       k(6.2, AT_FRONT, 'smooth'),

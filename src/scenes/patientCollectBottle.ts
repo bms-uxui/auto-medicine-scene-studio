@@ -220,9 +220,11 @@ export const patientCollectBottle: SceneDef = {
     // ---- patient ----
     track('patient', 'visible', steps([[0, false], [1.4, true]])),
     track('patient', 'position', [
-      k(1.4, [-1.5, 0, 1.95]),
-      k(3, AT_FRONT, 'smooth'),
-      k(3.4, AT_BAY, 'smooth'),
+      // One walk, not two, and over before the camera goes tight: a key in front of the
+      // cabinet eased out to a stop there, and what was left of the move played out under
+      // the insert framing, where she appeared to be yanked into shot
+      k(1.4, [-1.5, 0, 1.95], 'smooth'),
+      k(3.0, AT_BAY, 'smooth'),
       k(4.9, AT_BAY),
       k(6.2, AT_FRONT, 'smooth'),
       k(19.4, AT_FRONT),
