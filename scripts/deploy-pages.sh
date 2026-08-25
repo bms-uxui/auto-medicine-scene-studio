@@ -15,6 +15,12 @@ npm run build
 # Pages serves what it is given: no Jekyll pass, or it drops files beginning with _
 touch dist/.nojekyll
 
+# A deploy interrupted mid-build once pushed an index.html pointing at an asset hash that
+# was no longer there, and the live page came up blank. Refuse to publish that.
+for ref in $(grep -o '/[^"]*/assets/[^"]*' dist/index.html); do
+  [ -f "dist/${ref#/*/}" ] || { echo "dist/index.html references a missing asset: $ref" >&2; exit 1; }
+done
+
 WORKTREE=$(mktemp -d)
 # a worktree left behind by an interrupted deploy still holds the branch checked out
 git worktree prune
