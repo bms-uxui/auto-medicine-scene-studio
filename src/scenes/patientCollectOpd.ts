@@ -52,8 +52,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
  * case settling into her grip.
  */
-const CONTACT: [number, number, number] = [0.154, 0.0448, -0.1023]
-const CONTACT_TURN: [number, number, number] = [0.7819, -0.3668, 1.2004]
+const CONTACT: [number, number, number] = [0.1082, 0.0583, -0.1023]
+const CONTACT_TURN: [number, number, number] = [0.7895, -0.3464, 1.2221]
 /** where it ends up sitting in her hand once it is out */
 const CARRY: [number, number, number] = [0.004, -0.044, -0.042]
 const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.78]
@@ -255,8 +255,8 @@ export const patientCollectOpd: SceneDef = {
        */
       k(3.0, 0, 'decelerate'),
       k(3.7, 0.63, 'smooth'),
-      k(4.15, 0.72, 'smooth'),
-      k(5.4, 0.72, 'smooth'),
+      k(4.15, 0.88, 'smooth'),
+      k(5.4, 0.88, 'smooth'),
       k(6.2, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
