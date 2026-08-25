@@ -65,19 +65,6 @@ export function collectActors(): ActorDef[] {
       params: { height: 1.68, tilt: 0.7, rig: 'patient-hand' },
     },
     {
-      // what she carries out of the bay
-      id: 'handCase',
-      kind: 'prop',
-      primitive: 'plasticCase',
-      label: 'Case in her hand',
-      // Full size, and placed by the scene rather than here: the grab hands the case over
-      // where it stands on the shelf, so this copy has to be the same object at the same
-      // size — a scaled-down one made the swap visible as a pop.
-      position: [0.03, -0.026, -0.042],
-      visible: false,
-      params: { attachTo: 'patient:grip' },
-    },
-    {
       // the medicine, carried from the unpacking demonstration onwards
       id: 'handBox',
       kind: 'prop',

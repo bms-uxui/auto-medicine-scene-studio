@@ -277,35 +277,6 @@ export const patientCollectOpd: SceneDef = {
     ]),
 
     // ---- props in her hand ----
-    // the case rides in her hand from the bay all the way to the scan window
-    track('handCase', 'visible', steps([[0, false], [4.6, true], [10.5, false]])),
-    track('handCase', 'opacity', [
-      // a short crossfade with the one on the shelf: any longer and both are legible at
-      // once, which reads as two cases
-      k(4.6, 1), k(9.9, 1), k(10.5, 0, 'smooth'),
-    ]),
-    track('handCase', 'position', [
-      // held exactly on the shelf pose until the crossfade has finished — a copy that
-      // has already started settling into the grip no longer matches the one it replaces
-      k(4.48, CONTACT),
-      k(4.7, CONTACT, 'smooth'),
-      k(5.4, CARRY, 'smooth'),
-      k(10.5, CARRY),
-    ]),
-    track('handCase', 'rotation', [
-      // it starts turned exactly as it was on the shelf and rolls level in her hand as she
-      // draws it out. The hand's own frame is rolled over by the arm swing, so without the
-      // counter-roll in CARRY_TURN the tray ends up carried on its side.
-      k(4.48, CONTACT_TURN),
-      k(4.7, CONTACT_TURN, 'smooth'),
-      k(5.4, CARRY_TURN, 'smooth'),
-      k(7.2, [0.05, -0.2, 0.68], 'smooth'),
-      k(7.5, [0.05, -0.2, 0.68]),
-      // the QR is printed on the lid, so the lid has to be turned to face the reader —
-      // held flat the code points at the ceiling and the beam plays over the side wall
-      k(8.6, [1.25, -0.22, 0.05], 'smooth'),
-      k(9.9, [1.25, -0.22, 0.05]),
-    ]),
     // from the unpacking demonstration on, what she carries is the medicine itself
     track('handBox', 'visible', steps([[0, false], [15.8, true], [20.2, false], [23.2, true]])),
     track('handBox', 'opacity', [
@@ -325,31 +296,42 @@ export const patientCollectOpd: SceneDef = {
     ]),
     track('label', 'rotation', [k(19.4, [0.2, -0.3, 0.25]), k(20.4, [0.05, -0.2, 0.02], 'smooth')]),
 
-    // ---- the case: on the shelf, then staged for the unpacking demonstration ----
-    // once returned it stays in the basket: it is real set dressing from then on
-    track('case', 'visible', steps([[0, true], [4.6, false], [11.2, true]])),
+    // ---- the case: one object, from the shelf to the basket ----
     /*
-      * Up to the demonstration the carton inside is the one the case draws for itself, so
-      * it rides the case exactly however the case is turned — a separate actor tracking it
-      * by keyframes ended up poking through the lid as the case was lifted and rolled.
-      * From the demonstration on it is the `demoBox` actor instead, because there it has
-      * to leave the case rather than stay in it.
-      */
+     * It is never swapped for a copy in her hand. `attachTo` is a timeline channel, so
+     * the same actor simply changes what it is parented to: it stands on the shelf until
+     * her fingers close on it, rides her hand from there, and is set down in the basket.
+     *
+     * The position and rotation tracks change meaning at each switch — world coordinates
+     * while it is loose, an offset in the hand's frame while it is held — so the key that
+     * ends one span and the key that opens the next sit a tenth of a millisecond apart.
+     * No frame can land inside that gap and read a blend of the two.
+     */
+    custom('case', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [10.6, '']])),
+    /*
+     * Up to the demonstration the carton inside is the one the case draws for itself, so
+     * it rides the case exactly however the case is turned — a separate actor tracking it
+     * by keyframes ended up poking through the lid as the case was lifted and rolled.
+     * From the demonstration on it is the `demoBox` actor instead, because there it has
+     * to leave the case rather than stay in it.
+     */
     custom('case', 'empty', steps([[0, 0], [11.2, 1]])),
     custom('case', 'open', [k(12.3, 0), k(13.2, 1, 'smooth'), k(26.4, 1)]),
     track('case', 'opacity', [
-      // it lifts off the shelf and crossfades into the one in her hand
-      // a straight swap, not a crossfade: the case is clear plastic, and two coincident
-      // copies at half opacity double every edge in it
-      k(0, 1), k(4.6, 1),
+      // it dissolves out with her for the demonstration, and is back for it
+      k(0, 1), k(9.9, 1), k(10.5, 0, 'smooth'),
       k(11.2, 0), k(11.8, 1, 'smooth'), k(26.4, 1),
     ]),
     track('case', 'position', [
-      // it never moves: the copy in her hand takes over where it stands
       k(0, BOX_ON_SHELF),
-      k(4.75, BOX_ON_SHELF),
-      // repositioned while invisible, ready for the unpacking demonstration
-      k(11.2, DEMO),
+      k(4.5999, BOX_ON_SHELF, 'linear'),
+      // ---- held: an offset in her hand's frame ----
+      k(4.6, CONTACT),
+      k(4.7, CONTACT, 'smooth'),
+      k(5.4, CARRY, 'smooth'),
+      k(10.5999, CARRY, 'linear'),
+      // ---- loose again: world coordinates ----
+      k(10.6, DEMO),
       k(14.6, DEMO),
       // carried to a spot directly over the basket, then lowered straight down into it
       k(15.2, [IN_BASKET[0], IN_BASKET[1] + 0.24, IN_BASKET[2]], 'smooth'),
@@ -358,8 +340,20 @@ export const patientCollectOpd: SceneDef = {
     ]),
     track('case', 'rotation', [
       k(0, [0, 0.2, 0]),
-      k(4.75, [0, 0.2, 0]),
-      k(11.2, [0, 0, 0]),
+      k(4.5999, [0, 0.2, 0], 'linear'),
+      // it stays turned exactly as it stood on the shelf and rolls level in her hand as
+      // she draws it out: the hand's own frame is rolled over by the arm swing, so
+      // without the counter-roll in CARRY_TURN the tray ends up carried on its side
+      k(4.6, CONTACT_TURN),
+      k(4.7, CONTACT_TURN, 'smooth'),
+      k(5.4, CARRY_TURN, 'smooth'),
+      k(7.2, [0.05, -0.2, 0.68], 'smooth'),
+      k(7.5, [0.05, -0.2, 0.68]),
+      // the QR is printed on the lid, so the lid has to be turned to face the reader —
+      // held flat the code points at the ceiling and the beam plays over the side wall
+      k(8.6, [1.25, -0.22, 0.05], 'smooth'),
+      k(10.5999, [1.25, -0.22, 0.05], 'linear'),
+      k(10.6, [0, 0, 0]),
     ]),
     // the table and basket are real furniture — no fade tracks, they are simply there
 

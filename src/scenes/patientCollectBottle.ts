@@ -98,18 +98,6 @@ function bottleActors(): ActorDef[] {
       params: { height: 1.68, tilt: 0.7, rig: 'patient-hand' },
     },
     {
-      // what she carries out of the bay — deep in the fist, the bottle is tall
-      id: 'handBottle',
-      kind: 'prop',
-      primitive: 'medicineBottle',
-      label: 'Bottle in her hand',
-      // low in the fist: the QR is wrapped near the top of the glass, and any higher
-      // than this the fingers cover the code exactly where the reader has to see it
-      position: [0.006, -0.066, -0.022],
-      visible: false,
-      params: { attachTo: 'patient:grip' },
-    },
-    {
       // one bottle for the whole clip: it starts on the shelf inside the bay and is the
       // same object the applying demonstration stages
       id: 'bottle',
@@ -305,33 +293,6 @@ export const patientCollectBottle: SceneDef = {
     ]),
 
     // ---- props in her hand ----
-    track('handBottle', 'visible', steps([[0, false], [4.6, true], [13.4, false]])),
-    track('handBottle', 'opacity', [
-      // a short crossfade: any longer and the bottle on the shelf and the one in her
-      // hand are both legible at once, which reads as two bottles
-      k(4.6, 1), k(12.7, 1), k(13.4, 0, 'smooth'),
-    ]),
-    track('handBottle', 'position', [
-      // held exactly on the shelf pose until the crossfade has finished — a copy that
-      // has already started settling into the grip no longer matches the one it replaces
-      k(4.48, CONTACT),
-      k(4.7, CONTACT, 'smooth'),
-      k(5.4, CARRY, 'smooth'),
-      k(13.4, CARRY),
-    ]),
-    track('handBottle', 'rotation', [
-      // it starts turned exactly as it stood on the shelf and comes upright in her hand as
-      // she draws it out; the counter-roll in CARRY_TURN cancels the roll the arm swing
-      // puts into the hand's own frame
-      k(4.48, CONTACT_TURN),
-      k(4.7, CONTACT_TURN, 'smooth'),
-      k(5.4, CARRY_TURN, 'smooth'),
-      k(7.2, [0.05, -0.2, 0.65], 'smooth'),
-      k(7.5, [0.05, -0.2, 0.65]),
-      // the QR is wrapped on the front of the glass, so the front is turned to the reader
-      k(8.6, [0.05, -0.05, 0.06], 'smooth'),
-      k(12.7, [0.05, -0.05, 0.06]),
-    ]),
     // the printed sticker rides in her hand from the slot into the applying demonstration
     track('label', 'visible', steps([[0, false], [13.0, true], [13.6, false]])),
     track('label', 'opacity', [k(13.0, 1), k(13.2, 1), k(13.6, 0, 'smooth')]),
@@ -341,26 +302,48 @@ export const patientCollectBottle: SceneDef = {
     ]),
     track('label', 'rotation', [k(13.0, [0.2, -0.3, 0.25]), k(14.0, [0.05, -0.2, 0.02], 'smooth')]),
 
-    // ---- the bottle: on the shelf, then staged for the applying demonstration ----
-    track('bottle', 'visible', steps([[0, true], [4.6, false], [13.8, true]])),
+    // ---- the bottle: one object, from the shelf to the demonstration ----
+    /*
+     * Never swapped for a copy in her hand. `attachTo` is a timeline channel, so the same
+     * actor changes what it is parented to: it stands on the shelf until her fingers close
+     * on it, and rides her hand from there.
+     *
+     * The position and rotation tracks change meaning at each switch — world coordinates
+     * while it is loose, an offset in the hand's frame while it is held — so the key that
+     * ends one span and the key that opens the next sit a tenth of a millisecond apart.
+     */
+    custom('bottle', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [13.5, '']])),
     track('bottle', 'opacity', [
-      // it lifts off the shelf and crossfades into the one in her hand
-      // a straight swap, not a crossfade: the glass is translucent, and two coincident
-      // copies at half opacity read as a doubled bottle
-      k(0, 1), k(4.6, 1),
+      k(0, 1), k(12.7, 1), k(13.4, 0, 'smooth'),
       k(13.8, 0), k(14.4, 1, 'smooth'), k(19.4, 1),
     ]),
     track('bottle', 'position', [
-      // it never moves: the copy in her hand takes over where it stands
       k(0, ON_SHELF),
-      k(4.75, ON_SHELF),
-      k(13.8, STAGE),   // repositioned while invisible, ready for the apply demo
+      k(4.5999, ON_SHELF, 'linear'),
+      // ---- held: an offset in her hand's frame ----
+      k(4.6, CONTACT),
+      k(4.7, CONTACT, 'smooth'),
+      k(5.4, CARRY, 'smooth'),
+      k(13.4999, CARRY, 'linear'),
+      // ---- loose again: world coordinates, staged for the applying demonstration ----
+      k(13.5, STAGE),
       k(19.4, STAGE),
     ]),
     track('bottle', 'rotation', [
       k(0, [0, 0.2, 0]),
-      k(4.75, [0, 0.2, 0]),
-      k(13.8, [0, -0.14, 0]),
+      k(4.5999, [0, 0.2, 0], 'linear'),
+      // it stays turned exactly as it stood on the shelf and comes upright in her hand as
+      // she draws it out; the counter-roll in CARRY_TURN cancels the roll the arm swing
+      // puts into the hand's own frame
+      k(4.6, CONTACT_TURN),
+      k(4.7, CONTACT_TURN, 'smooth'),
+      k(5.4, CARRY_TURN, 'smooth'),
+      k(7.2, [0.05, -0.2, 0.65], 'smooth'),
+      k(7.5, [0.05, -0.2, 0.65]),
+      // the QR is wrapped on the front of the glass, so the front is turned to the reader
+      k(8.6, [0.05, -0.05, 0.06], 'smooth'),
+      k(13.4999, [0.05, -0.05, 0.06], 'linear'),
+      k(13.5, [0, -0.14, 0]),
     ]),
 
     // ---- demonstration: peel the sticker off its backing and press it on the bottle ----
