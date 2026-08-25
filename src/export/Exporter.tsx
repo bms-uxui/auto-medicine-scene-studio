@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { advance, useThree } from '@react-three/fiber'
 import type { SceneDef } from '../anim/types'
 import { drawOverlay, preloadOverlayIcons } from '../overlay/draw'
-import { cutoutsReady } from '../scene/CutoutRig'
+import { cutoutsReady, pending as cutoutsPending } from '../scene/CutoutRig'
 import { SCREEN_PAGES, preloadScreens, type ScreenState } from '../scene/KioskScreen'
 import { useStudio, type ExportFormat } from '../studio/store'
 
@@ -71,6 +71,16 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       await new Promise((r) => setTimeout(r, 120))
 
       const saved: string[] = []
+      /*
+       * One clock for the whole export, not one per language.
+       *
+       * It used to be reset at the top of each pass, so the second pass handed r3f a
+       * timestamp minutes ahead of the last frame it had seen. Every per-frame animator
+       * then got that gap as its delta in a single step — damped values snapped, and the
+       * cut-out rigs came out of it with the waist and arm gone, which is why a run could
+       * write a whole TH file and then an EN one with pieces of the character missing.
+       */
+      let clock = performance.now()
       for (const lang of langs) {
       const key = langs.length > 1 ? `${scene.id}-${lang}` : scene.id
       useStudio.getState().set('lang', lang)
@@ -86,7 +96,6 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       setExport({ total, frame: 0, message: `rendering ${lang.toUpperCase()}…` })
       await post('/__studio/frames/begin', { scene: key })
 
-      let clock = performance.now()
       let batch: string[] = []
       const flush = async (startIndex: number) => {
         if (batch.length === 0) return
@@ -105,6 +114,10 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       let batchStart = 0
       for (let i = 0; i < total; i++) {
         if (cancelled) break
+        // A figure can start re-cutting its art mid-render — a module reloading under the
+        // dev server does it — and every frame captured in that window would be missing a
+        // layer. The check costs nothing while nothing is rebuilding.
+        if (cutoutsPending.count > 0) await cutoutsReady()
         useStudio.getState().setTime(i * dt)
         clock += dt * 1000
         advance(clock)

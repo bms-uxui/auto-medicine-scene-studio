@@ -1,7 +1,7 @@
 import type { SceneDef } from '../anim/types'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import {
-  A, BASKET, BASKET_VIEW, BOX_ON_SHELF, BUTTON, CARTON, DEMO, DOOR, FULL, IN_BASKET,
+  A, BASKET, BASKET_VIEW, BOX_ON_SHELF, CARTON, DEMO, DOOR, FULL, IN_BASKET,
   READ, SCAN, SLOT, TABLE, TAKE, collectActors,
 } from './collectCommon'
 
@@ -27,7 +27,7 @@ import {
  *  11.6-15.0  she raises the medicine to the window; verified at 14.4
  *  15.6-19.4  the label prints at the middle slot and is taken
  *  19.4-22.6  dissolve to the medicine; peel and press the label on
- *  23.8-26.4  back at the cabinet; press for the next item at 24.6
+ *  23.8-26.4  back at the cabinet; the screen confirms the whole order is done
  */
 /** where she stands beside the table, having just set the case down */
 const AT_TABLE: [number, number, number] = [TABLE[0] - 0.34, 0, 0.8]
@@ -116,7 +116,10 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- kiosk ----
     custom('kiosk', 'screenState', steps([
-      [0, 'medicineList'], [1.6, 'collecting'], [15, 'collectingNext'], [24.6, 'collectingDone'],
+      // The cabinet dispenses the whole order in one go, so the flow never reaches a
+      // next-item step — and both collecting pages carry that button in their artwork.
+      // The screen goes straight from the order list to the completed summary.
+      [0, 'medicineList'], [1.6, 'collectingDone'],
     ])),
     custom('kiosk', 'doorOpen', [
       k(1.6, 0), k(2.6, 1, 'decelerate'), k(4.8, 1), k(6, 0, 'accelerate'),
@@ -168,7 +171,7 @@ export const patientCollectOpd: SceneDef = {
       k(4.6, 1), k(6, 0.3), k(12.2, 0.3), k(13, 1, 'smooth'), k(14.6, 1),
       k(15.6, 0.12, 'smooth'), k(17, 0.12),
       k(18, 1, 'smooth'), k(19.2, 1), k(20, 0.55, 'smooth'),
-      k(23.8, 0.55), k(24.4, 1, 'smooth'), k(26.4, 1),
+      k(23.8, 0.55), k(26.4, 0.55),
     ]),
     custom('patient', 'bend', [
       k(2.7, 0), k(3.7, 1, 'smooth'), k(4.3, 1), k(5.1, 0, 'smooth'), k(26.4, 0),
@@ -184,9 +187,7 @@ export const patientCollectOpd: SceneDef = {
       k(17.6, TAKE, 'smooth'),
       k(19.2, TAKE),
       k(20, READ, 'smooth'),
-      k(23.8, READ),
-      k(24.2, BUTTON, 'smooth'),
-      k(26.4, BUTTON),
+      k(26.4, READ),
     ]),
 
     // ---- props in her hand ----
@@ -286,13 +287,12 @@ export const patientCollectOpd: SceneDef = {
     { t: 14.4, label: 'medicine scanned' },
     { t: 17.2, label: 'label printed' },
     { t: 22.1, label: 'label applied' },
-    { t: 24.6, label: 'next item' },
+    { t: 24.6, label: 'order complete' },
   ],
   steps: [
     { id: 'collect', label: 'รับยา', labelEn: 'Collecting\nMedicine', icon: 'box', t0: 0, t1: 15.6 },
     { id: 'sticker', label: 'รับสติ๊กเกอร์', labelEn: 'Collecting\nSticker', icon: 'sticker', t0: 15.6, t1: 19.4 },
-    { id: 'apply', label: 'แปะสติ๊กเกอร์', labelEn: 'Applying\nSticker', icon: 'apply', t0: 19.4, t1: 23.8 },
-    { id: 'continue', label: 'รับรายการต่อไป', labelEn: 'Continue\nCollecting', icon: 'continue', t0: 23.8, t1: 26.4 },
+    { id: 'apply', label: 'แปะสติ๊กเกอร์', labelEn: 'Applying\nSticker', icon: 'apply', t0: 19.4, t1: 26.4 },
   ],
   captions: [
     { t0: 1.6, t1: 2.6, text: 'ช่องรับยาอยู่บริเวณนี้', textEn: 'The pick-up slot is located here' },
@@ -302,7 +302,7 @@ export const patientCollectOpd: SceneDef = {
     { t0: 11.8, t1: 13.6, text: 'กรุณาสแกนกล่องยาที่ช่องสแกนด้านขวา', textEn: 'Please scan the medicine at the window on the right' },
     { t0: 15.8, t1: 18.6, text: 'ระบบกำลังพิมพ์ฉลากยาที่ช่องสติกเกอร์', textEn: 'The label is being printed at the sticker slot' },
     { t0: 20.4, t1: 22.4, text: 'กรุณาติดฉลากยาลงบนกล่องยา', textEn: 'Please apply the label to the medicine box' },
-    { t0: 24, t1: 26, text: 'กรุณากดปุ่มเพื่อรับยารายการถัดไป', textEn: 'Please press the button for the next item' },
+    { t0: 24, t1: 26, text: 'รับยาครบทุกรายการเรียบร้อย', textEn: 'All items in the order have been collected' },
   ],
   success: [{ t0: 24.6, t1: 25.8 }],
 }

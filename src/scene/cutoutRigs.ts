@@ -34,15 +34,23 @@ export interface CutoutRigDef {
 }
 
 export const CUTOUT_RIGS: Record<string, CutoutRigDef> = {
-  /** Staff worker holding a medicine box — Figma 36:400 */
+  /**
+   * Staff worker holding the refill sheet — Figma 36:400.
+   *
+   * The art was re-exported when the flow changed from scanning a medicine box to
+   * presenting a refill sheet at the QR window: the limb now carries the sheet
+   * (`Rectangle 108`), the same id the patient's prescription slip has.
+   */
   staff: {
-    art: { w: 515, h: 978 },
-    limbIds: ['path2090', 'path2089', 'path2091', 'Vector', ...Array.from({ length: 14 }, (_, i) => `Vector_${i + 2}`)],
+    art: { w: 484, h: 978 },
+    limbIds: ['path2090', 'path2089', 'path2071', 'Rectangle 108'],
     shoulder: [205, 243],
-    grip: [468, 336],
-    pivotX: 0.393,
+    // the middle of the sheet, which is what has to land in the beam
+    grip: [445, 352],
+    pivotX: 0.417,
     swing: [-1.3, 1.0],
-    rest: 0,
+    // he walks in with the sheet held down at his side and lifts it to the window
+    rest: -0.9,
   },
   /**
    * The same patient with an empty hand — Figma 74:4453. Used wherever a prop has to sit

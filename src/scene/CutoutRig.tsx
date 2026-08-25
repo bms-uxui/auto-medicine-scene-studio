@@ -21,14 +21,23 @@ const EDGE_CUT = 0.35
 /** how many cut-out figures are still splitting their art; the exporter waits on this */
 export const pending = { count: 0 }
 
-/** resolves once no figure is mid-rebuild, or after `timeout` ms */
-export async function cutoutsReady(timeout = 20000) {
+/**
+ * Resolves once no figure is mid-rebuild, or after `timeout` ms.
+ *
+ * It waits for the count to *stay* at zero rather than to merely touch it: a rebuild is
+ * started from an effect, so the work can be scheduled a beat after whatever caused it —
+ * a language swap, or a module reloading under the dev server — and a check that fires in
+ * that gap would wave the exporter through into frames with pieces of a figure missing.
+ */
+export async function cutoutsReady(timeout = 20000, settleMs = 400) {
   const until = performance.now() + timeout
-  while (pending.count > 0 && performance.now() < until) {
-    await new Promise((r) => setTimeout(r, 100))
+  let quietSince = performance.now()
+  for (;;) {
+    if (pending.count > 0) quietSince = performance.now()
+    else if (performance.now() - quietSince >= settleMs) return
+    if (performance.now() > until) return
+    await new Promise((r) => setTimeout(r, 60))
   }
-  // one more beat so the meshes that just mounted have been through a render
-  await new Promise((r) => setTimeout(r, 150))
 }
 
 type Layers = { body: THREE.Texture; arm: THREE.Texture; torso?: THREE.Texture }
@@ -248,9 +257,16 @@ export function CutoutRig({
   const gripPos = useMemo(() => new THREE.Vector3(), [])
   const shoulderPos = useMemo(() => new THREE.Vector3(), [])
 
-  useFrame((_, dt) => {
+  useFrame((_, rawDt) => {
     const node = board.current
     if (!node) return
+    /*
+     * A frame's worth of time at most. The exporter drives the loop by hand and the
+     * viewport can be left paused in a background tab, so `dt` occasionally arrives as
+     * seconds — or minutes — in one step, which turns every damped value here into a jump
+     * rather than a settle.
+     */
+    const dt = Math.min(Math.max(rawDt, 0), 0.1)
     if (gripRef && gripRef.current !== gripMarker.current) gripRef.current = gripMarker.current
     const d = dyn?.current ?? {}
     const blend = THREE.MathUtils.clamp(d.tilt ?? tilt, 0, 1)
@@ -303,11 +319,20 @@ export function CutoutRig({
     // stooping toward a low target: the torso leans and takes the arm with it
     if (waistPivot.current) {
       const bend = THREE.MathUtils.clamp(d.bend ?? 0, 0, 1) * (rig.bendLimit ?? 0)
-      waistPivot.current.rotation.z = THREE.MathUtils.damp(waistPivot.current.rotation.z, -bend, 6, dt)
+      const next = THREE.MathUtils.damp(waistPivot.current.rotation.z, -bend, 6, dt)
+      /*
+       * A non-finite angle takes the whole upper body out of the render — three skips a
+       * subtree whose matrix has a NaN in it, and the figure is drawn as legs and hair
+       * with no torso and no arm. Whatever produced it, the pose recovers from here
+       * rather than staying broken for the rest of the scene.
+       */
+      waistPivot.current.rotation.z = Number.isFinite(next) ? next : 0
     }
 
     const want = THREE.MathUtils.lerp(rig.rest, aimSwing.current, reach)
     swing.current = THREE.MathUtils.lerp(swing.current, want, 0.35)
+    if (!Number.isFinite(swing.current)) swing.current = rig.rest
+    if (!Number.isFinite(aimSwing.current)) aimSwing.current = rig.rest
     if (armPivot.current) armPivot.current.rotation.z = swing.current
 
     // insert framing: only the arm is on screen, so drop the rest of the board

@@ -27,7 +27,7 @@ const THAI_TITLE: Record<string, string> = {
   'patient-scan-qr': 'ผู้ป่วย · สแกนคิวอาร์โค้ด',
   'patient-collect-opd': 'ผู้ป่วย · รับยา (OPD)',
   'patient-collect-ipd': 'ผู้ป่วย · รับยา (IPD)',
-  'staff-scan-barcode': 'เจ้าหน้าที่ · สแกนบาร์โค้ดจ่ายยา',
+  'staff-scan-barcode': 'เจ้าหน้าที่ · สแกนคิวอาร์โค้ดใบเติมยา',
 }
 
 const fmtSize = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`)
