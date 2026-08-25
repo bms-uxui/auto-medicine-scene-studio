@@ -1,4 +1,5 @@
-import type { ActorDef, SceneDef } from '../anim/types'
+import type { ActorDef, SceneDef, Vec3 } from '../anim/types'
+import type { Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE, TAKE } from './collectCommon'
 
@@ -132,6 +133,44 @@ function bottleActors(): ActorDef[] {
   ]
 }
 
+/**
+ * The push from the establishing wide into the pick-up bay.
+ *
+ * It used to be three keys — 15 m, then 3 m, then 1.5 m, then the insert — and since
+ * every key eases out to a stop, the move stalled three times on the way in.
+ *
+ * What reads as one continuous push is a constant *apparent* zoom rate, which means the
+ * distance has to fall by the same ratio at each step rather than by the same number of
+ * metres. So the move is sampled off an exponential in distance, eased in and out of rest
+ * by the S-curve on `u` rather than by the keys' own easings — every key is linear, and
+ * there are enough of them (one every tenth of a second) that the corner where two of
+ * them meet is far below anything the eye picks up. Six keys with eased ends was not
+ * enough: the join between the ramp-in and the first straight span halved the zoom rate
+ * in a single frame.
+ *
+ * (Their times are off the 0.2s grid the rest of the sheet uses because they are points
+ * on that curve, not beats.)
+ */
+const mix = (a: Vec3, b: Vec3, u: number): Vec3 =>
+  [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]
+const PUSH_T0 = 0.4
+const PUSH_T1 = 3.2
+const PUSH_DIST = 1.06
+const PUSH_STEPS = 28
+const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
+  const v = i / PUSH_STEPS
+  // starts and arrives at rest; everything between runs at a near-constant zoom rate
+  const u = v * v * (3 - 2 * v)
+  return {
+    t: +(PUSH_T0 + (PUSH_T1 - PUSH_T0) * v).toFixed(3),
+    // the frame settles from the whole cabinet onto the open bay, then onto the bottle
+    target: u < 0.5 ? mix(FULL, DOOR, u * 2) : mix(DOOR, ON_SHELF, (u - 0.5) * 2),
+    dist: DIST.wide * Math.pow(PUSH_DIST / DIST.wide, u),
+    // the last key's easing governs the hold that follows it, not the push
+    ease: (i === PUSH_STEPS ? 'smooth' : 'linear') as Ease,
+  }
+})
+
 export const patientCollectBottle: SceneDef = {
   id: 'patient-collect-bottle',
   name: 'Patient · Collecting Medicine (no case)',
@@ -145,13 +184,11 @@ export const patientCollectBottle: SceneDef = {
     // ---- shot list ----
     track('camera', 'position', [
       k(0, shot(FULL, DIST.wide, 35, 13)),
-      k(0.4, shot(FULL, DIST.wide, 35, 13)),
-      k(1.6, shot(DOOR, DIST.close, 36, 14), 'smooth'),           // 1 · Collecting Medicine
-      k(2.6, shot(DOOR, 1.5, 34, 10), 'standard'),
-      // settled on the bottle by 3.2 and all but parked until she has hold of it: the
-      // rig locks its screen-space aim half a second after the reach stops changing, so a
-      // camera still moving through the grab leaves the hand grasping at thin air
-      k(3.2, shot(ON_SHELF, 1.06, 34, 13), 'smooth'),
+      // one continuous push into the bay — see `push` above. It is settled on the bottle by 3.2
+      // and all but parked until she has hold of it: the rig aims her hand in screen space
+      // and locks that aim half a second after the reach stops changing, so a camera still
+      // moving through the grab leaves the hand grasping at thin air.
+      ...push.map((s) => k(s.t, shot(s.target, s.dist, 34.6, 13), s.ease)),
       k(5.45, shot(ON_SHELF, 1.02, 34, 13), 'smooth'),
       // out of the insert and back onto her, then across the cabinet face to the window
       k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -172,10 +209,7 @@ export const patientCollectBottle: SceneDef = {
     ]),
     track('target', 'position', [
       k(0, FULL),
-      k(0.4, FULL),
-      k(1.6, DOOR, 'smooth'),
-      k(3.2, DOOR, 'smooth'),
-      k(3.2, ON_SHELF, 'smooth'),
+      ...push.map((s) => k(s.t, s.target, s.ease)),
       k(5.45, ON_SHELF),
       k(6.7, FRONT_WIDE, 'smooth'),
       k(7.2, FRONT_WIDE),
@@ -190,8 +224,9 @@ export const patientCollectBottle: SceneDef = {
       k(19.4, SCREEN_VIEW),
     ]),
     custom('camera', 'fov', [
-      k(0, FOV), k(0.4, FOV), k(2.6, 20, 'smooth'),
-      k(3.2, 23, 'smooth'), k(5.45, 23), k(6.7, 24, 'smooth'), k(7.2, 24),
+      // held through the push: a focal length changing under a dolly is a second move on
+      // top of the first, and they do not cancel
+      k(0, 23), k(5.45, 23), k(6.7, 24, 'smooth'), k(7.2, 24),
       k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(13.4, 23, 'smooth'),
       k(14.2, 24, 'smooth'), k(16.6, 24), k(17.6, 22, 'smooth'), k(19.4, 22),
     ]),
