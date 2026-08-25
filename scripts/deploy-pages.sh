@@ -16,7 +16,11 @@ npm run build
 touch dist/.nojekyll
 
 WORKTREE=$(mktemp -d)
-git worktree remove --force "$WORKTREE" 2>/dev/null || true
+# a worktree left behind by an interrupted deploy still holds the branch checked out
+git worktree prune
+git worktree list --porcelain | awk '/^worktree /{p=$2} /^branch refs\/heads\/gh-pages$/{print p}' |
+  while read -r stale; do git worktree remove --force "$stale" 2>/dev/null || true; done
+git worktree prune
 if git show-ref --quiet refs/heads/gh-pages; then
   git worktree add "$WORKTREE" gh-pages
 else
