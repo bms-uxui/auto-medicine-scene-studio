@@ -18,30 +18,101 @@ import { textureFromImage } from './artTexture'
 /** alpha cut-off for the layers: high enough to drop the anti-aliased rim outright */
 const EDGE_CUT = 0.35
 
+/** how many cut-out figures are still splitting their art; the exporter waits on this */
+export const pending = { count: 0 }
+
+/** resolves once no figure is mid-rebuild, or after `timeout` ms */
+export async function cutoutsReady(timeout = 20000) {
+  const until = performance.now() + timeout
+  while (pending.count > 0 && performance.now() < until) {
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  // one more beat so the meshes that just mounted have been through a render
+  await new Promise((r) => setTimeout(r, 150))
+}
+
 type Layers = { body: THREE.Texture; arm: THREE.Texture; torso?: THREE.Texture }
 
-function rasterise(svg: string, pixelHeight: number, aspect: number): Promise<THREE.Texture> {
+function rasteriseOnce(svg: string, pixelHeight: number, aspect: number): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
     const blob = new Blob([svg], { type: 'image/svg+xml' })
     const url = URL.createObjectURL(blob)
     const img = new Image()
-    img.onload = () => {
+    const done = async () => {
+      // `decode()` after load: drawing an SVG blob that the compositor has not finished
+      // decoding yields a blank frame, and the layer then vanishes from the character
+      try {
+        await img.decode()
+      } catch {
+        // decode() rejects on some blob URLs even when the image is usable; the coverage
+        // check below is what actually decides whether the raster is good
+      }
       URL.revokeObjectURL(url)
       resolve(textureFromImage(img, pixelHeight, aspect))
     }
+    img.onload = () => void done()
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('staff layer failed to rasterise'))
+      reject(new Error('cut-out layer failed to rasterise'))
     }
     img.src = url
   })
 }
 
+/**
+ * Rasterises one layer, retrying while the result comes back blank.
+ *
+ * Every layer of a rig carries art, so an empty raster is always a browser hiccup — and
+ * an invisible one: the layer is simply missing from the render, which is how a
+ * character came out as legs and hair with no torso or arm in an export.
+ */
+async function rasterise(svg: string, pixelHeight: number, aspect: number, label = 'layer'): Promise<THREE.Texture> {
+  let tex = await rasteriseOnce(svg, pixelHeight, aspect)
+  for (let attempt = 1; attempt < 4 && (tex.userData.coverage ?? 0) < 0.0005; attempt++) {
+    console.warn(`cut-out ${label} rasterised empty — retry ${attempt}`)
+    tex.dispose()
+    await new Promise((r) => setTimeout(r, 80 * attempt))
+    tex = await rasteriseOnce(svg, pixelHeight, aspect)
+  }
+  if ((tex.userData.coverage ?? 0) < 0.0005) {
+    console.error(`cut-out ${label} rasterised empty after 4 attempts`)
+  }
+  return tex
+}
+
 /** Splits the source SVG into a body layer and a limb layer, each on the full canvas. */
 function useCutoutLayers(url: string, rig: CutoutRigDef, pixelHeight = 1024) {
   const [layers, setLayers] = useState<Layers | null>(null)
+  /** bumped to rebuild the layers when what came back does not match the rig */
+  const [attempt, setAttempt] = useState(0)
+  /**
+   * Which build is allowed to publish its result.
+   *
+   * Cancelling the in-flight build from the effect's cleanup looked right and was wrong:
+   * switching scenes changes `url` and `rig` in separate renders, so the cleanup of one
+   * run kills the build started by the next, and the figure keeps the *previous* scene's
+   * split — the patient stood in the collect scene wearing the layers cut for the QR
+   * scene, with the torso layer missing entirely. Only the newest run may publish; the
+   * others throw their textures away.
+   */
+  const runId = useRef(0)
+  const alive = useRef(true)
+  // set on mount as well as cleared on unmount: fast refresh re-runs effects, and a flag
+  // that is only ever cleared stays cleared, so every later build would discard itself
   useEffect(() => {
-    let cancelled = false
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
+  useEffect(() => {
+    const id = ++runId.current
+    // drop what is on screen first: a split that does not match this rig draws the
+    // figure with pieces missing, which is worse than a frame with no figure at all
+    setLayers((prev) => (prev && id > 1 ? null : prev))
+    // the exporter waits on this: rendering frames while a figure's layers are still
+    // being cut produces an export with pieces of the character missing
+    pending.count++
     const build = async () => {
       const text = await fetch(url).then((r) => r.text())
       const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
@@ -59,21 +130,33 @@ function useCutoutLayers(url: string, rig: CutoutRigDef, pixelHeight = 1024) {
       const moving = new Set(rig.limbIds)
       const upper = new Set(rig.torsoIds ?? [])
       const [body, arm, torso] = await Promise.all([
-        rasterise(only((id) => !moving.has(id) && !upper.has(id)), pixelHeight, aspect),
-        rasterise(only((id) => moving.has(id)), pixelHeight, aspect),
-        upper.size ? rasterise(only((id) => upper.has(id)), pixelHeight, aspect) : Promise.resolve(undefined),
+        rasterise(only((id) => !moving.has(id) && !upper.has(id)), pixelHeight, aspect, 'body'),
+        rasterise(only((id) => moving.has(id)), pixelHeight, aspect, 'arm'),
+        upper.size ? rasterise(only((id) => upper.has(id)), pixelHeight, aspect, 'torso') : Promise.resolve(undefined),
       ])
-      if (cancelled) {
+      if (!alive.current || runId.current !== id) {
         for (const t of [body, arm, torso]) t?.dispose()
         return
       }
       setLayers({ body, arm, torso })
     }
-    void build()
-    return () => {
-      cancelled = true
+    void build().finally(() => {
+      pending.count--
+    })
+  }, [url, rig, pixelHeight, attempt])
+
+  /**
+   * A rig that names torso paths must come back with a torso layer. Anything else means
+   * the split ran against a stale rig — the figure then renders as one flat board that
+   * cannot bend, and in the worst case a layer goes missing from the picture entirely.
+   */
+  useEffect(() => {
+    if (!layers) return
+    if ((rig.torsoIds?.length ?? 0) > 0 && !layers.torso && attempt < 2) {
+      console.warn('cut-out layers built without the torso split — rebuilding')
+      setAttempt((a) => a + 1)
     }
-  }, [url, rig, pixelHeight])
+  }, [layers, rig, attempt])
 
   useEffect(
     () => () => {

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { advance, useThree } from '@react-three/fiber'
 import type { SceneDef } from '../anim/types'
 import { drawOverlay, preloadOverlayIcons } from '../overlay/draw'
+import { cutoutsReady } from '../scene/CutoutRig'
 import { SCREEN_PAGES, preloadScreens, type ScreenState } from '../scene/KioskScreen'
 import { useStudio, type ExportFormat } from '../studio/store'
 
@@ -56,6 +57,9 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       const ovCtx = ov.getContext('2d')!
 
       await preloadOverlayIcons()
+      // a figure whose art is still being split into layers renders with parts missing;
+      // an export that starts in that window bakes the hole into every frame
+      await cutoutsReady()
 
       // Render at the exact output resolution. The viewport canvas is only as wide as
       // the window allows, and copying that into a larger frame just upscales it — the
@@ -73,6 +77,11 @@ export function Exporter({ scene, overlay }: { scene: SceneDef; overlay: React.R
       preloadScreens(Object.keys(SCREEN_PAGES) as ScreenState[], lang)
       // give the swapped-in screen pages a moment to decode before the first frame
       await new Promise((r) => setTimeout(r, 250))
+      // Swapping the language rebuilds the scene, which remounts the cut-out figures and
+      // sets them cutting their art again. The second language pass used to start right
+      // through that window, which is why the TH file came out whole and the EN one had
+      // a character with no torso.
+      await cutoutsReady()
 
       setExport({ total, frame: 0, message: `rendering ${lang.toUpperCase()}…` })
       await post('/__studio/frames/begin', { scene: key })

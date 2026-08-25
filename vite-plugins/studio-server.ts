@@ -1,8 +1,11 @@
 import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Connect, Plugin } from 'vite'
+// @ts-expect-error - plain JS helper, shared with the static build script
+import { buildZip } from '../scripts/zip.mjs'
 
 const ROOT = process.cwd()
 const WORK = path.join(ROOT, '.studio')
@@ -31,6 +34,14 @@ function run(cmd: string, args: string[]): Promise<{ code: number; out: string }
     child.on('error', (e) => resolve({ code: 127, out: String(e) }))
     child.on('close', (code) => resolve({ code: code ?? 1, out }))
   })
+}
+
+
+const MIME: Record<string, string> = {
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
 }
 
 const ENCODE_PY = `
@@ -71,6 +82,78 @@ export function studioServer(): Plugin {
           res.end(JSON.stringify(body))
         }
         try {
+          // ---- the visitor gallery reads rendered files straight out of `out/` ----
+          if (req.method === 'GET' && url === '/exports') {
+            const outDir = path.join(ROOT, 'out')
+            let names: string[] = []
+            try {
+              names = await readdir(outDir)
+            } catch {
+              return send(200, { ok: true, files: [] })
+            }
+            const files = []
+            for (const name of names.sort()) {
+              if (!/\.(mp4|webm|gif|webp)$/i.test(name)) continue
+              const info = await stat(path.join(outDir, name))
+              files.push({ name, size: info.size, modified: info.mtimeMs })
+            }
+            return send(200, { ok: true, files })
+          }
+
+          // every render of one scene — both languages, every format — in one archive
+          if (req.method === 'GET' && url.startsWith('/out-zip/')) {
+            const scene = path.basename(decodeURIComponent(url.slice('/out-zip/'.length))).replace(/\.zip$/, '')
+            const outDir = path.join(ROOT, 'out')
+            const wanted = new RegExp(`^${scene.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(-(th|en))?\\.(mp4|webm|gif|webp)$`, 'i')
+            let names: string[] = []
+            try {
+              names = (await readdir(outDir)).filter((n) => wanted.test(n)).sort()
+            } catch {
+              names = []
+            }
+            if (names.length === 0) return send(404, { ok: false, error: 'no renders for that scene' })
+            const entries = await Promise.all(
+              names.map(async (name) => ({ name, data: await readFile(path.join(outDir, name)) })),
+            )
+            const zip = buildZip(entries)
+            res.statusCode = 200
+            res.setHeader('content-type', 'application/zip')
+            res.setHeader('content-length', String(zip.length))
+            res.setHeader('content-disposition', `attachment; filename="${scene}.zip"`)
+            return res.end(zip)
+          }
+
+          if (req.method === 'GET' && url.startsWith('/out/')) {
+            // basename only: the gallery must not be able to reach outside `out/`
+            const name = path.basename(decodeURIComponent(url.slice('/out/'.length)))
+            const file = path.join(ROOT, 'out', name)
+            let info
+            try {
+              info = await stat(file)
+            } catch {
+              return send(404, { ok: false, error: 'no such export' })
+            }
+            const type = MIME[path.extname(name).toLowerCase()] ?? 'application/octet-stream'
+            res.setHeader('content-type', type)
+            res.setHeader('accept-ranges', 'bytes')
+            // `url` has had its query stripped, so the flag is read off the raw request
+            if ((req.url ?? '').includes('download=1')) {
+              res.setHeader('content-disposition', `attachment; filename="${name}"`)
+            }
+            // range support: without it the player can load the file but not seek in it
+            const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ''))
+            if (range) {
+              const start = range[1] ? Number(range[1]) : 0
+              const end = range[2] ? Number(range[2]) : info.size - 1
+              res.statusCode = 206
+              res.setHeader('content-range', `bytes ${start}-${end}/${info.size}`)
+              res.setHeader('content-length', String(end - start + 1))
+              return createReadStream(file, { start, end }).pipe(res)
+            }
+            res.setHeader('content-length', String(info.size))
+            return createReadStream(file).pipe(res)
+          }
+
           if (req.method !== 'POST') return next()
 
           if (url === '/frames/begin') {

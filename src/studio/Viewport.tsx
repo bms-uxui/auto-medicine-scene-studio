@@ -156,21 +156,40 @@ export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'tra
   const [contextLost, setContextLost] = useState(false)
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const holder = useRef<HTMLDivElement>(null)
-  const [cssWidth, setCssWidth] = useState(0)
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null)
+  const ratio = scene.size[0] / scene.size[1]
+  // The frame box is sized here rather than in CSS: `aspect-ratio` loses to a
+  // `max-height` clamp — the height shrinks, the width does not, and the canvas ends up
+  // wider than the scene. That silently widens the camera's horizontal FOV, and the
+  // exporter then squeezes that canvas into the output frame, so the render came out
+  // stretched. Fitting the box by hand keeps the canvas at exactly the scene ratio.
   useEffect(() => {
-    const el = holder.current
+    const el = holder.current?.parentElement
     if (!el) return
-    const ro = new ResizeObserver(([entry]) => setCssWidth(entry.contentRect.width))
+    const fit = () => {
+      const r = el.getBoundingClientRect()
+      const style = getComputedStyle(el)
+      const availW = r.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      const availH = r.height - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+      const cap = holder.current?.closest('.studio.theater') ? Infinity : scene.size[0]
+      const w = Math.max(1, Math.min(availW, availH * ratio, cap))
+      setBox({ w, h: w / ratio })
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [ratio, scene.size])
+  const cssWidth = box?.w ?? 0
   // While exporting, the backing store is grown to the full output resolution: copying a
   // window-sized canvas into a 1080-wide frame just upscales it, and the render came out
   // soft. The dpr prop is the only lever — r3f re-applies it on every commit.
-  const exportDpr = cssWidth > 0 ? Math.min(4, Math.max(1, scene.size[0] / cssWidth)) : 1
+  const exportScale = useStudio((s) => s.exportState.scale)
+  const exportDpr =
+    cssWidth > 0 ? Math.min(4, Math.max(1, (scene.size[0] * (exportScale || 1)) / cssWidth)) : 1
 
   return (
-    <div ref={holder} className="viewport" style={{ aspectRatio: `${scene.size[0]} / ${scene.size[1]}` }}>
+    <div ref={holder} className="viewport" style={box ? { width: box.w, height: box.h } : { visibility: 'hidden' }}>
       <Canvas
         shadows
         dpr={exporting ? exportDpr : [1, 1.5]}

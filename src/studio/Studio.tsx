@@ -72,6 +72,7 @@ export function Studio() {
           <button key={m} className={gizmoMode === m ? 'on' : ''} onClick={() => setGizmoMode(m)}>{m[0].toUpperCase()}</button>
         ))}
         <button onClick={toggleTheater} title="full screen review (F)">⛶ full screen</button>
+        <a className="link" href="#/gallery">gallery →</a>
         <a className="link" href="#/lab">model lab →</a>
         <span className={`status${lastError ? ' error' : ''}`} title={lastError ?? undefined}>
           {lastError ?? (exportState.running ? `export ${exportState.frame}/${exportState.total}` : exportState.message)}

@@ -27,3 +27,5 @@ dist-ssr
 .studio/
 out/
 public/models/*.glb
+# staged for the static gallery build, rebuilt from out/
+public/media/

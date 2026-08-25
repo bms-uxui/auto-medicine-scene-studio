@@ -43,8 +43,8 @@ main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
 .stage { display: grid; place-items: center; gap: 10px; padding: 14px; min-height: 0; }
 .viewport {
   position: relative;
-  width: min(100%, 1080px);
-  max-height: 100%;
+  /* size comes from Viewport.tsx — see the fit() note there; CSS sizing here broke the
+     frame ratio whenever the stage was shorter than the scene */
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
@@ -117,7 +117,6 @@ main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
 .studio.theater main { grid-template-columns: 1fr; }
 .studio.theater .stage { padding: 0; }
 .studio.theater .viewport {
-  width: auto; height: 100%; max-width: 100%; max-height: 100%;
   border-radius: 0; box-shadow: none;
 }
 

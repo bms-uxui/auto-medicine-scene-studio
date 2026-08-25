@@ -1,0 +1,477 @@
+/*
+ * The scaffold's `#root` is a centred 1126px column with side borders — it boxes the
+ * gallery in. The gallery is a full-bleed page, so it opts out of that shell.
+ *
+ * Everything else is scoped under `.gallery`: the studio's stylesheet is loaded app-wide
+ * and owns plain class names like `.stage` and `.panel`.
+ */
+#root:has(> .gallery) {
+  width: 100%;
+  max-width: none;
+  border-inline: 0;
+  text-align: left;
+  background: #fff;
+}
+
+.gallery {
+  --ink: #0b0d0f;
+  --dim: #6b7280;
+  --line: #e6e8eb;
+  --surface: #f4f5f7;
+
+  /*
+   * Motion tokens, not hardcoded durations. Everything on this page picks one of these,
+   * so the whole surface moves at one tempo and a change lands everywhere at once.
+   *
+   * Direction matters: opening is slower and eases out (it arrives), closing is quicker
+   * and eases in (it gets out of the way), and anything under the pointer answers in
+   * `--dur-fast` so it feels attached to the cursor.
+   */
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 440ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  min-height: 100vh;
+  background: #fff;
+  color: var(--ink);
+  font-family: 'Helvetica Neue', Helvetica, Arial, 'Noto Sans Thai', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * The scaffold styles bare `h1`/`h2`/`p` with its own theme tokens, and in a dark system
+ * theme those resolve to near-white — which is how the caption came out white on white.
+ * The gallery paints its own text, so it takes the headings back.
+ */
+.gallery h1,
+.gallery h2,
+.gallery p {
+  color: inherit;
+  font-family: inherit;
+  letter-spacing: normal;
+}
+
+/* ---- top bar ----------------------------------------------------------------- */
+
+.gallery header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px clamp(18px, 4vw, 44px);
+  border-bottom: 1px solid var(--line);
+}
+
+.gallery .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gallery .brand .mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.gallery .brand .name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.gallery .brand .sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.gallery .tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery .tools .ghost {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.gallery .tools .ghost:hover {
+  background: var(--surface);
+  border-color: #d3d7dd;
+}
+
+.gallery .note {
+  margin: 28px clamp(18px, 4vw, 44px);
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--dim);
+}
+
+.gallery .note.error {
+  border-color: #f0c9c4;
+  background: #fdf3f2;
+  color: #a03c30;
+}
+
+/* ---- accordion --------------------------------------------------------------- */
+
+.gallery .accordion {
+  display: flex;
+  gap: 12px;
+  height: min(72vh, 660px);
+  padding: clamp(18px, 3vh, 32px) clamp(18px, 4vw, 44px) clamp(14px, 2vh, 22px);
+}
+
+.gallery .panel {
+  position: relative;
+  /*
+   * Two measured pixel widths, set on the row by the component. Flex ratios cannot be
+   * interpolated from a collapsed panel, so the row used to jump to the new layout and
+   * chase it; a width between two numbers animates cleanly.
+   */
+  flex: 0 0 auto;
+  width: var(--w-closed, 96px);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  cursor: pointer;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* collapsing: shorter, ease-in — the panel is getting out of the way */
+  transition: width var(--dur-base) var(--ease-in);
+}
+
+.gallery .panel.open {
+  width: var(--w-open, 60%);
+  cursor: default;
+  /* expanding: longer, ease-out — the panel is arriving and should settle, not snap */
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+/*
+ * A hairline ring drawn inside the card, on its own layer so it costs nothing to animate
+ * and never affects the measured widths the way a real border would.
+ */
+.gallery .panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgb(11 13 15 / 0.16);
+  transition: box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.gallery .panel:hover::before {
+  box-shadow: inset 0 0 0 1px rgb(11 13 15 / 0.3);
+}
+
+.gallery .panel.open::before {
+  box-shadow: inset 0 0 0 1px rgb(11 13 15 / 0.34);
+}
+
+/*
+ * The shadow lives on a pseudo-element and only ever fades. Transitioning a large blurred
+ * shadow on the box itself repaints it at a new size every frame, which is exactly the
+ * work that made the expand stutter.
+ */
+.gallery .panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 30px 70px -30px rgb(11 13 15 / 0.45), 0 2px 10px rgb(11 13 15 / 0.08);
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.gallery .panel.open::after {
+  opacity: 1;
+}
+
+/* the media never changes size: it is always as wide as an open panel, and gets clipped */
+.gallery .media {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--w-open, 100%);
+  height: 100%;
+  /* centred in the panel, so a spine shows the middle of the frame rather than its edge */
+  margin: 0 auto;
+}
+
+.gallery .panel .player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.gallery .panel .player.empty {
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+/* the dim on a closed card: one composited overlay fading, never a filter on the video */
+.gallery .media .dim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(11 13 15 / 0.34);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.gallery .panel.open .media .dim,
+.gallery .panel:hover .media .dim {
+  opacity: 0;
+}
+
+/* ---- pills, top corner ------------------------------------------------------- */
+
+.gallery .pills {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  /* leaving: no delay, quick — they must not linger over a panel that is closing */
+  transition: opacity var(--dur-fast) var(--ease-in), transform var(--dur-fast) var(--ease-in);
+}
+
+.gallery .panel.open .pills {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  /* arriving: staggered behind the panel, so the card is already wide when they land */
+  transition: opacity var(--dur-base) var(--ease-out) var(--dur-base),
+    transform var(--dur-base) var(--ease-out) var(--dur-base);
+}
+
+.gallery .segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px -4px rgb(11 13 15 / 0.35);
+}
+
+.gallery .segmented button {
+  padding: 6px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.gallery .segmented button.on {
+  background: var(--ink);
+  color: #fff;
+}
+
+.gallery .pill-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 6px 18px -8px rgb(11 13 15 / 0.8);
+  transition: transform var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
+}
+
+.gallery .pill-cta:hover {
+  transform: translateY(-1px);
+  background: #23272c;
+}
+
+.gallery .pill-cta .ico {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.gallery .pill-note {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.66;
+}
+
+/* ---- label ------------------------------------------------------------------- */
+
+.gallery .label {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 22px;
+  color: #fff;
+  /* an even wash over the spine, not a fade under a video */
+  background: rgb(11 13 15 / 0.42);
+  pointer-events: none;
+  transition: background var(--dur-base) var(--ease-standard);
+}
+
+.gallery .panel:hover .label {
+  background: rgb(11 13 15 / 0.24);
+}
+
+/*
+ * The spine title is a rotated line, not `writing-mode`: vertical writing turns Thai
+ * glyphs on their side (and flipping it back stands them on their heads), while rotating
+ * the whole line keeps every script the right way up.
+ */
+.gallery .label .t {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+  white-space: nowrap;
+  max-width: min(70vh, 520px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.gallery .label .n {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+/* the caption for whatever is open, set under the row in ordinary black on white */
+.gallery .now {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 0 clamp(18px, 4vw, 44px) clamp(28px, 5vh, 56px);
+}
+
+.gallery .now .n {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.gallery .now h1 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.gallery .now .m {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.gallery .now .m span + span::before {
+  content: '·';
+  margin-right: 6px;
+}
+
+@media (max-width: 860px) {
+  .gallery .accordion {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .gallery .panel {
+    width: auto;
+    min-height: 84px;
+    height: 84px;
+    transition: height var(--dur-base) var(--ease-in);
+  }
+
+  .gallery .panel.open {
+    width: auto;
+    height: 58vh;
+    transition: height var(--dur-slow) var(--ease-out);
+  }
+
+  .gallery .media {
+    width: 100%;
+  }
+
+  .gallery .panel:not(.open) .label {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0 16px;
+  }
+
+  .gallery .panel:not(.open) .label .t {
+    writing-mode: horizontal-tb;
+    transform: none;
+    max-height: none;
+  }
+}
+
+/* someone who has asked the system for less motion gets the states, not the travel */
+@media (prefers-reduced-motion: reduce) {
+  .gallery *,
+  .gallery *::before,
+  .gallery *::after {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 1ms !important;
+  }
+}

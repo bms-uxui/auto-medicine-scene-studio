@@ -102,6 +102,12 @@ export function textureFromImage(img: CanvasImageSource, pixelHeight: number, as
   bleedEdges(ctx, canvas.width, canvas.height)
 
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  // A blank raster is a real failure mode: Chromium occasionally hands back an empty
+  // frame for an SVG blob that has only just decoded, and the layer then silently
+  // disappears from the render — a character with no torso or arm. Coverage is reported
+  // so the caller can retry instead of shipping the hole.
+  let coverage = 0
+  for (let i = 3; i < pixels.data.length; i += 4) if (pixels.data[i] > 8) coverage++
   const tex = new THREE.DataTexture(new Uint8Array(pixels.data.buffer), canvas.width, canvas.height, THREE.RGBAFormat)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.flipY = true
@@ -113,5 +119,6 @@ export function textureFromImage(img: CanvasImageSource, pixelHeight: number, as
   tex.magFilter = THREE.LinearFilter
   tex.anisotropy = 8
   tex.needsUpdate = true
+  tex.userData.coverage = coverage / (canvas.width * canvas.height)
   return tex
 }
