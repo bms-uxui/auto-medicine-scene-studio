@@ -54,7 +54,7 @@ const LIFTED: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0.0
  */
 const GRAB_AIM: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0.02, BOX_ON_SHELF[2]]
 /** and where she stands to reach into the pick-up bay */
-const AT_BAY: [number, number, number] = [0.3, 0, 0.596]
+const AT_BAY: [number, number, number] = [0.3, 0, 0.78]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 
@@ -197,7 +197,17 @@ export const patientCollectOpd: SceneDef = {
       k(1.4, 1), k(9.9, 1), k(10.5, 0, 'smooth'), k(15.6, 0), k(16.4, 1, 'smooth'),
       k(19.4, 1), k(20.2, 0, 'smooth'), k(22.8, 0), k(24.0, 1, 'smooth'), k(26.4, 1),
     ]),
-    custom('patient', 'tilt', [k(1.4, 0.3), k(3, 0.45, 'smooth'), k(26.4, 0.45)]),
+    custom('patient', 'tilt', [
+      /*
+       * `tilt` blends the cut-out board from upright towards fully camera-aligned. Under
+       * the insert the camera is a metre from the shelf and pitched down, so a tilted
+       * board lays its top away from the lens — straight through the front of the
+       * cabinet. She stands up square for the grab and only leans back into the shot
+       * once the camera has pulled out again.
+       */
+      k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
+      k(5.1, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(26.4, 0.45),
+    ]),
     // into the bay -> up to the scan window with the case -> down while the sticker
     // prints -> up to the slot -> resting on the medicine
     track('patient', 'reach', [
