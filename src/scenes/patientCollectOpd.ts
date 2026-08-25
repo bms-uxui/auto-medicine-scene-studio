@@ -50,7 +50,7 @@ const LIFTED: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0.1
 
 export const patientCollectOpd: SceneDef = {
   id: 'patient-collect-opd',
-  name: 'Patient · Collecting Medicine (OPD)',
+  name: 'Patient · Collecting Medicine (in a case)',
   duration: 26.4,
   fps: 30,
   size: [1080, 683],
@@ -332,7 +332,7 @@ export const patientCollectOpd: SceneDef = {
     { t0: 7.8, t1: 9.6, text: 'สแกนคิวอาร์โค้ดบนกล่องยา', textEn: 'Scan the QR code on the medicine case' },
     { t0: 11.8, t1: 15.4, text: 'กรุณาแกะกล่อง นำยาออกจากกล่อง แล้ววางกล่องคืนที่ตะกร้า', textEn: 'Open the case, take the medicine out and return the case to the basket' },
     { t0: 16.2, t1: 19.0, text: 'ระบบกำลังพิมพ์สติกเกอร์ยาที่ช่องสติกเกอร์', textEn: 'The medicine sticker is being printed at the sticker slot' },
-    { t0: 20.6, t1: 22.8, text: 'กรุณาแปะสติกเกอร์ลงบนยา', textEn: 'Please apply the sticker to the medicine' },
+    { t0: 20.6, t1: 22.8, text: 'กรุณาแปะสติกเกอร์ลงบนซองยา', textEn: 'Please apply the sticker to the medicine packet' },
     { t0: 24.2, t1: 26.0, text: 'รับยาครบทุกรายการเรียบร้อย', textEn: 'All items in the order have been collected' },
   ],
   success: [{ t0: 24.8, t1: 26.0 }],

@@ -187,6 +187,58 @@ export function MedicinePackage({ qr, ...props }: { qr?: boolean } & React.Compo
   )
 }
 
+/**
+ * A bottle of oral solution: the medicine that cannot be put in a plastic case at all.
+ *
+ * Those items carry the hospital's QR code on the bottle itself, and the pharmacy
+ * sticker goes back onto the same bottle — there is nothing to unpack, so the flow that
+ * uses this prop is three beats shorter than the boxed one.
+ */
+export function MedicineBottle(props: React.ComponentProps<'group'>) {
+  const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Oral solution', '60 ml'], BRAND.blue), [])
+  const code = qrTexture()
+  useEffect(() => () => label.dispose(), [label])
+  const R = 0.028
+  const H = 0.105
+  /** the printed panels are wrapped on the glass, not floated in front of it */
+  const arc = (r: number, h: number, span: number) =>
+    [r, r, h, 40, 1, true, -span / 2, span] as const
+  return (
+    <group {...props}>
+      {/* body — amber glass, so the fill reads dark against the pale cabinet */}
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[R, R * 0.98, H, 40]} />
+        <meshStandardMaterial color="#c98a3f" roughness={0.28} metalness={0.05} transparent opacity={0.92} />
+      </mesh>
+      {/* shoulder and neck */}
+      <mesh position={[0, H / 2 + 0.008, 0]}>
+        <cylinderGeometry args={[R * 0.46, R * 0.9, 0.016, 32]} />
+        <meshStandardMaterial color="#c98a3f" roughness={0.28} metalness={0.05} transparent opacity={0.92} />
+      </mesh>
+      {/* cap */}
+      <mesh position={[0, H / 2 + 0.026, 0]}>
+        <cylinderGeometry args={[R * 0.58, R * 0.58, 0.02, 32]} />
+        <meshStandardMaterial color="#f2f5f8" roughness={0.5} metalness={0} />
+      </mesh>
+      {/* the printed label, wrapped round the lower half of the front */}
+      <mesh position={[0, -H * 0.16, 0]}>
+        <cylinderGeometry args={arc(R * 1.02, H * 0.5, Math.PI * 1.1)} />
+        <meshStandardMaterial map={label} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+      {/* the hospital's QR, on the bare glass above the label — the pharmacy sticker is
+          applied over the printed label, so the code has to sit clear of it */}
+      <mesh position={[0, H * 0.3, 0]}>
+        <cylinderGeometry args={arc(R * 1.05, R * 1.0, Math.PI * 0.6)} />
+        <meshStandardMaterial color="#ffffff" roughness={0.8} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, H * 0.3, 0]}>
+        <cylinderGeometry args={arc(R * 1.06, R * 0.85, Math.PI * 0.5)} />
+        <meshStandardMaterial map={code} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  )
+}
+
 /** Medicine box the machine dispenses. */
 export function MedicineBox(props: React.ComponentProps<'group'>) {
   const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Take 1 tablet after meals', 'Qty 30'], BRAND.blue), [])
@@ -609,6 +661,7 @@ export const PROP_COMPONENTS = {
   returnBasket: ReturnBasket,
   sideTable: SideTable,
   medicinePackage: MedicinePackage,
+  medicineBottle: MedicineBottle,
   medicineBoxArt: MedicineBoxArt,
   medicineBox: MedicineBox,
   sticker: Sticker,
