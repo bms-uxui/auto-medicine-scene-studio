@@ -70,11 +70,10 @@ export function collectActors(): ActorDef[] {
       kind: 'prop',
       primitive: 'plasticCase',
       label: 'Case in her hand',
-      // In the hand's own frame: well behind the drawn fist and low in it, so the fingers
-      // close over the near edge instead of the case cutting through them. At full size
-      // the tray is twice the width of the hand and read as passing straight through it.
+      // Full size, and placed by the scene rather than here: the grab hands the case over
+      // where it stands on the shelf, so this copy has to be the same object at the same
+      // size — a scaled-down one made the swap visible as a pop.
       position: [0.03, -0.026, -0.042],
-      scale: 0.68,
       visible: false,
       params: { attachTo: 'patient:grip' },
     },
