@@ -70,10 +70,11 @@ export function collectActors(): ActorDef[] {
       kind: 'prop',
       primitive: 'plasticCase',
       label: 'Case in her hand',
-      // in the hand's own frame: centred on the fist and behind it, so the fingers cover
-      // the near edge. Scaled to the hand — full size hangs out of the drawn fist.
-      position: [0.008, -0.03, -0.018],
-      scale: 0.85,
+      // In the hand's own frame: well behind the drawn fist and low in it, so the fingers
+      // close over the near edge instead of the case cutting through them. At full size
+      // the tray is twice the width of the hand and read as passing straight through it.
+      position: [0.03, -0.026, -0.042],
+      scale: 0.68,
       visible: false,
       params: { attachTo: 'patient:grip' },
     },

@@ -39,11 +39,17 @@ function applyCommon(obj: THREE.Object3D | null, actor: ActorDef, values: Record
   if (typeof opacity === 'number') {
     obj.traverse((child) => {
       const mesh = child as THREE.Mesh
-      if (!mesh.isMesh) return
-      // the shadow pass ignores opacity, so a faded-out actor would still throw its
-      // shadow across the floor of the demonstration — stop casting once it is gone
-      if (mesh.userData.baseCastShadow === undefined) mesh.userData.baseCastShadow = mesh.castShadow
-      mesh.castShadow = (mesh.userData.baseCastShadow as boolean) && opacity > 0.05
+      // Lines carry material too. The plastic case draws its edges as line segments so
+      // clear plastic reads against a pale cabinet, and skipping them left that wireframe
+      // hanging in frame at full strength while the case itself had faded to nothing.
+      const isLine = (child as unknown as THREE.Line).isLine
+      if (!mesh.isMesh && !isLine) return
+      if (mesh.isMesh) {
+        // the shadow pass ignores opacity, so a faded-out actor would still throw its
+        // shadow across the floor of the demonstration — stop casting once it is gone
+        if (mesh.userData.baseCastShadow === undefined) mesh.userData.baseCastShadow = mesh.castShadow
+        mesh.castShadow = (mesh.userData.baseCastShadow as boolean) && opacity > 0.05
+      }
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       for (const m of materials) {
         const mat = m as THREE.MeshStandardMaterial
