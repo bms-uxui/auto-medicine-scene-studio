@@ -188,51 +188,155 @@ export function MedicinePackage({ qr, ...props }: { qr?: boolean } & React.Compo
 }
 
 /**
+ * Label artwork for the bottle of oral solution: a printed panel with a blue header, the
+ * drug and strength, the dosage lines and a fill scale down one side.
+ */
+function bottleLabelTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 640
+  canvas.height = 320
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#fbfcfd'
+  ctx.fillRect(0, 0, 640, 320)
+  ctx.fillStyle = BRAND.blue
+  ctx.fillRect(0, 0, 640, 82)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '700 46px Inter, Helvetica, Arial, sans-serif'
+  ctx.fillText('Lorem', 30, 60)
+  ctx.font = '500 30px Inter, Helvetica, Arial, sans-serif'
+  ctx.fillText('100 mg / 5 ml', 210, 58)
+
+  ctx.fillStyle = '#39424e'
+  ctx.font = '500 27px Inter, Helvetica, Arial, sans-serif'
+  ctx.fillText('Oral solution', 30, 136)
+  ctx.fillStyle = '#6b7684'
+  ctx.font = '400 24px Inter, Helvetica, Arial, sans-serif'
+  ctx.fillText('Shake well before use', 30, 176)
+  ctx.fillText('Store below 30°C', 30, 212)
+
+  // the dosing scale printed down the right-hand edge of the label
+  ctx.strokeStyle = '#9aa5b1'
+  ctx.lineWidth = 3
+  for (let i = 0; i <= 4; i++) {
+    const y = 120 + i * 42
+    ctx.beginPath()
+    ctx.moveTo(600, y)
+    ctx.lineTo(i % 2 ? 572 : 552, y)
+    ctx.stroke()
+  }
+  ctx.fillStyle = '#6b7684'
+  ctx.font = '400 20px Inter, Helvetica, Arial, sans-serif'
+  ctx.fillText('60 ml', 494, 300)
+
+  ctx.strokeStyle = '#dfe5ec'
+  ctx.lineWidth = 4
+  ctx.strokeRect(2, 2, 636, 316)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  return tex
+}
+
+/**
  * A bottle of oral solution: the medicine that cannot be put in a plastic case at all.
  *
  * Those items carry the hospital's QR code on the bottle itself, and the pharmacy
  * sticker goes back onto the same bottle — there is nothing to unpack, so the flow that
  * uses this prop is three beats shorter than the boxed one.
+ *
+ * The body is turned from a profile rather than built out of cylinders: a real bottle has
+ * a base fillet, a shoulder and a neck, and stacking primitives left it reading as a tube
+ * with a lid balanced on it.
  */
 export function MedicineBottle(props: React.ComponentProps<'group'>) {
-  const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Oral solution', '60 ml'], BRAND.blue), [])
+  const label = useMemo(() => bottleLabelTexture(), [])
   const code = qrTexture()
   useEffect(() => () => label.dispose(), [label])
-  const R = 0.028
+  const R = 0.0235
   const H = 0.105
-  /** the printed panels are wrapped on the glass, not floated in front of it */
-  const arc = (r: number, h: number, span: number) =>
-    [r, r, h, 40, 1, true, -span / 2, span] as const
+  /** half the body height — everything is measured from the bottle's own centre */
+  const h = H / 2
+
+  /** the turned profile, from the centre of the base up to the lip of the neck */
+  const glass = useMemo(() => {
+    const p: [number, number][] = [
+      [0, -h],
+      [R * 0.86, -h],
+      [R, -h + 0.006],            // base fillet
+      [R, h * 0.52],              // straight body
+      [R * 0.985, h * 0.62],
+      [R * 0.9, h * 0.72],        // shoulder
+      [R * 0.7, h * 0.86],
+      [R * 0.47, h * 0.97],
+      [R * 0.4, h * 1.06],        // neck
+      [R * 0.4, h * 1.3],
+      [R * 0.44, h * 1.34],       // the lip the cap screws onto
+    ]
+    return new THREE.LatheGeometry(p.map(([x, y]) => new THREE.Vector2(x, y)), 48)
+  }, [h, R])
+
+  /** the syrup inside, stopping short of the shoulder so there is a headspace */
+  const fill = useMemo(() => {
+    const p: [number, number][] = [
+      [0, -h + 0.004],
+      [R * 0.93, -h + 0.004],
+      [R * 0.93, h * 0.42],
+      [0, h * 0.42],
+    ]
+    return new THREE.LatheGeometry(p.map(([x, y]) => new THREE.Vector2(x, y)), 40)
+  }, [h, R])
+
+  useEffect(() => () => { glass.dispose(); fill.dispose() }, [glass, fill])
+
+  /** a panel wrapped on the glass rather than floated in front of it */
+  const arc = (r: number, height: number, span: number) =>
+    [r, r, height, 44, 1, true, -span / 2, span] as const
+
   return (
     <group {...props}>
-      {/* body — amber glass, so the fill reads dark against the pale cabinet */}
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[R, R * 0.98, H, 40]} />
-        <meshStandardMaterial color="#c98a3f" roughness={0.28} metalness={0.05} transparent opacity={0.92} />
+      {/* amber glass */}
+      <mesh geometry={glass} castShadow receiveShadow>
+        <meshStandardMaterial
+          color="#cf8b34"
+          roughness={0.2}
+          metalness={0.04}
+          transparent
+          opacity={0.74}
+          side={THREE.DoubleSide}
+        />
       </mesh>
-      {/* shoulder and neck */}
-      <mesh position={[0, H / 2 + 0.008, 0]}>
-        <cylinderGeometry args={[R * 0.46, R * 0.9, 0.016, 32]} />
-        <meshStandardMaterial color="#c98a3f" roughness={0.28} metalness={0.05} transparent opacity={0.92} />
+      {/* the syrup it is filled with, a shade deeper than the glass */}
+      <mesh geometry={fill}>
+        <meshStandardMaterial color="#7d4310" roughness={0.34} metalness={0} />
       </mesh>
-      {/* cap */}
-      <mesh position={[0, H / 2 + 0.026, 0]}>
-        <cylinderGeometry args={[R * 0.58, R * 0.58, 0.02, 32]} />
-        <meshStandardMaterial color="#f2f5f8" roughness={0.5} metalness={0} />
+      {/* screw cap: a body, the knurled band round it and a flat crown */}
+      <mesh position={[0, h * 1.42, 0]} castShadow>
+        <cylinderGeometry args={[R * 0.56, R * 0.56, 0.019, 40]} />
+        <meshStandardMaterial color="#eef2f6" roughness={0.45} metalness={0} />
+      </mesh>
+      <mesh position={[0, h * 1.42, 0]}>
+        <cylinderGeometry args={[R * 0.575, R * 0.575, 0.012, 40, 1, true]} />
+        <meshStandardMaterial color="#d7dee6" roughness={0.7} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, h * 1.42 + 0.0098, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[R * 0.56, 40]} />
+        <meshStandardMaterial color="#f6f9fb" roughness={0.4} metalness={0} />
       </mesh>
       {/* the printed label, wrapped round the lower half of the front */}
-      <mesh position={[0, -H * 0.16, 0]}>
-        <cylinderGeometry args={arc(R * 1.02, H * 0.5, Math.PI * 1.1)} />
-        <meshStandardMaterial map={label} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
+      <mesh position={[0, -h * 0.44, 0]}>
+        <cylinderGeometry args={arc(R * 1.015, H * 0.4, Math.PI * 0.95)} />
+        <meshStandardMaterial map={label} roughness={0.72} metalness={0} side={THREE.DoubleSide} />
       </mesh>
-      {/* the hospital's QR, on the bare glass above the label — the pharmacy sticker is
-          applied over the printed label, so the code has to sit clear of it */}
-      <mesh position={[0, H * 0.3, 0]}>
-        <cylinderGeometry args={arc(R * 1.05, R * 1.0, Math.PI * 0.6)} />
+      {/*
+        The hospital's QR, on the bare glass above the label. It has to sit clear of the
+        label: the pharmacy sticker is applied over that, and would cover the code.
+      */}
+      <mesh position={[0, h * 0.3, 0]}>
+        <cylinderGeometry args={arc(R * 1.03, R * 1.16, Math.PI * 0.6)} />
         <meshStandardMaterial color="#ffffff" roughness={0.8} metalness={0} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, H * 0.3, 0]}>
-        <cylinderGeometry args={arc(R * 1.06, R * 0.85, Math.PI * 0.5)} />
+      <mesh position={[0, h * 0.3, 0]}>
+        <cylinderGeometry args={arc(R * 1.045, R * 0.95, Math.PI * 0.46)} />
         <meshStandardMaterial map={code} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
       </mesh>
     </group>

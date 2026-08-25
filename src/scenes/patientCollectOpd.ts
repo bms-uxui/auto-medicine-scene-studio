@@ -40,12 +40,17 @@ const AT_TABLE: [number, number, number] = [TABLE[0] - 0.34, 0, 0.8]
 /** where she stands at the front of the cabinet, facing the scan window and the slot */
 const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
 /**
- * Where the case ends up as she lifts it clear of the shelf — and where her hand is
- * standing when it gets there. Everything about the grab is tuned around these two
- * meeting: she stands at `AT_BAY`, leans by the amount the bend track asks for, and the
- * grip lands here.
+ * Where the case ends up as she draws it out of the bay, and how it is turned when it
+ * gets there.
+ *
+ * These are not staged by eye: they are the world pose of the copy that rides her hand,
+ * read off the rig at the handover. The two used to be about 12 cm apart in depth, and
+ * since the crossfade swaps one for the other, that showed as the case jumping
+ * forward and flattening out. Matching them makes the swap invisible — what the shot
+ * shows is one case, lifted out of the bay and turned over in her hand.
  */
-const LIFTED: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0.078, BOX_ON_SHELF[2] + 0.046]
+const LIFTED: [number, number, number] = [0.4253, 0.7182, 0.4557]
+const LIFTED_TURN: [number, number, number] = [-0.379, 0.825, 0.014]
 
 /**
  * What her hand is aimed at during the grab. The rig swings the arm about the shoulder
@@ -84,7 +89,7 @@ export const patientCollectOpd: SceneDef = {
       // aims her hand in screen space and locks that aim after half a second, so a camera
       // still moving through the reach leaves the hand grasping at where the case was.
       k(3.2, shot(BOX_ON_SHELF, 1.06, 34, 13), 'smooth'),
-      k(5.1, shot(BOX_ON_SHELF, 1.02, 34, 13), 'smooth'),
+      k(5.2, shot(BOX_ON_SHELF, 1.02, 34, 13), 'smooth'),
       // out of the insert and back onto her, then across the cabinet face to the window
       k(6.5, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(7.1, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -112,7 +117,7 @@ export const patientCollectOpd: SceneDef = {
       k(1.6, DOOR, 'smooth'),
       k(3.2, DOOR, 'smooth'),
       k(3.2, BOX_ON_SHELF, 'smooth'),
-      k(5.1, BOX_ON_SHELF),
+      k(5.2, BOX_ON_SHELF),
       k(6.5, FRONT_WIDE, 'smooth'),
       k(7.1, FRONT_WIDE),
       k(8.0, SCAN, 'smooth'),
@@ -133,7 +138,7 @@ export const patientCollectOpd: SceneDef = {
     ]),
     custom('camera', 'fov', [
       k(0, FOV), k(0.4, FOV), k(2.6, 20, 'smooth'),
-      k(3.2, 23, 'smooth'), k(5.1, 23), k(6.5, 24, 'smooth'), k(7.1, 24),
+      k(3.2, 23, 'smooth'), k(5.2, 23), k(6.5, 24, 'smooth'), k(7.1, 24),
       k(8.0, 22, 'smooth'), k(10.5, 22), k(11.3, 22, 'smooth'), k(16.0, 22),
       k(17.0, 22, 'smooth'), k(18.8, 23, 'smooth'),
       k(20.4, 24, 'smooth'), k(22.8, 24), k(24.2, 22, 'smooth'), k(26.4, 22),
@@ -206,7 +211,7 @@ export const patientCollectOpd: SceneDef = {
        * once the camera has pulled out again.
        */
       k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
-      k(5.1, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(26.4, 0.45),
+      k(5.2, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(26.4, 0.45),
     ]),
     // into the bay -> up to the scan window with the case -> down while the sticker
     // prints -> up to the slot -> resting on the medicine
@@ -224,7 +229,7 @@ export const patientCollectOpd: SceneDef = {
       k(1.4, 0), k(3.0, 0, 'accelerate'),
       k(3.9, 0.87, 'decelerate'),
       k(4.15, 1, 'smooth'),
-      k(5.05, 1, 'smooth'),
+      k(5.15, 1, 'smooth'),
       k(5.6, 0.6, 'smooth'), k(6.4, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
       k(10.4, 0.3, 'smooth'), k(16.6, 0.3),
       k(17.6, 1, 'smooth'), k(19.2, 1), k(20, 0.55, 'smooth'),
@@ -242,14 +247,14 @@ export const patientCollectOpd: SceneDef = {
       k(3.0, 0, 'decelerate'),
       k(3.7, 0.63, 'smooth'),
       k(4.15, 0.72, 'smooth'),
-      k(5.05, 0.72, 'smooth'),
+      k(5.15, 0.72, 'smooth'),
       k(5.9, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
       // the rig lines the grip up with the target on screen, so aiming at the case itself
       // puts her hand on it while the board stays in front of the cabinet
       k(0, GRAB_AIM),
-      k(5.05, GRAB_AIM),
+      k(5.15, GRAB_AIM),
       k(7.1, READ, 'smooth'),
       k(17.0, READ),
       k(18.0, TAKE, 'smooth'),
@@ -260,16 +265,18 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- props in her hand ----
     // the case rides in her hand from the bay all the way to the scan window
-    track('handCase', 'visible', steps([[0, false], [4.8, true], [10.5, false]])),
+    track('handCase', 'visible', steps([[0, false], [4.95, true], [10.5, false]])),
     track('handCase', 'opacity', [
       // a short crossfade with the one on the shelf: any longer and both are legible at
       // once, which reads as two cases
-      k(4.8, 0), k(5.05, 1, 'smooth'), k(9.9, 1), k(10.5, 0, 'smooth'),
+      k(4.95, 0), k(5.1, 1, 'smooth'), k(9.9, 1), k(10.5, 0, 'smooth'),
     ]),
     track('handCase', 'rotation', [
-      k(5.05, [0.05, -0.3, 0.1]),
-      k(7.1, [0.05, -0.2, 0], 'smooth'),
-      k(7.4, [0.05, -0.2, 0]),
+      // the hand's own frame is rolled over by the arm swing; without the counter-roll
+      // the tray is carried on its side and the carton would fall straight out of it
+      k(4.9, [0.05, -0.3, 0.78]),
+      k(7.1, [0.05, -0.2, 0.68], 'smooth'),
+      k(7.4, [0.05, -0.2, 0.68]),
       // the QR is printed on the lid, so the lid has to be turned to face the reader —
       // held flat the code points at the ceiling and the beam plays over the side wall
       k(8.6, [1.25, -0.22, 0.05], 'smooth'),
@@ -296,14 +303,19 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- the case: on the shelf, then staged for the unpacking demonstration ----
     // once returned it stays in the basket: it is real set dressing from then on
-    track('case', 'visible', steps([[0, true], [5.1, false], [11.2, true]])),
-    // the carton in the case is the demoBox actor, not the one the case draws for itself:
-    // one box, so it visibly leaves the case instead of appearing to stay in it
-    custom('case', 'empty', [k(0, 1)]),
+    track('case', 'visible', steps([[0, true], [5.15, false], [11.2, true]])),
+    /*
+      * Up to the demonstration the carton inside is the one the case draws for itself, so
+      * it rides the case exactly however the case is turned — a separate actor tracking it
+      * by keyframes ended up poking through the lid as the case was lifted and rolled.
+      * From the demonstration on it is the `demoBox` actor instead, because there it has
+      * to leave the case rather than stay in it.
+      */
+    custom('case', 'empty', steps([[0, 0], [11.2, 1]])),
     custom('case', 'open', [k(12.3, 0), k(13.2, 1, 'smooth'), k(26.4, 1)]),
     track('case', 'opacity', [
       // it lifts off the shelf and crossfades into the one in her hand
-      k(0, 1), k(4.8, 1), k(5.05, 0, 'smooth'),
+      k(0, 1), k(4.95, 1), k(5.1, 0, 'smooth'),
       k(11.2, 0), k(11.8, 1, 'smooth'), k(26.4, 1),
     ]),
     track('case', 'position', [
@@ -315,8 +327,8 @@ export const patientCollectOpd: SceneDef = {
       // the shelf and stops where the hand is standing, so the two stay together through
       // the crossfade
       k(4.35, BOX_ON_SHELF, 'standard'),
-      k(4.8, LIFTED, 'smooth'),
-      k(5.05, LIFTED),
+      k(4.95, LIFTED, 'smooth'),
+      k(5.15, LIFTED),
       // repositioned while invisible, ready for the unpacking demonstration
       k(11.2, DEMO),
       k(14.6, DEMO),
@@ -327,26 +339,23 @@ export const patientCollectOpd: SceneDef = {
     ]),
     track('case', 'rotation', [
       k(0, [0, 0.2, 0]),
-      k(5.05, [0, 0.2, 0]),
+      k(4.35, [0, 0.2, 0], 'smooth'),
+      k(4.95, LIFTED_TURN, 'smooth'),
+      k(5.15, LIFTED_TURN),
       k(11.2, [0, 0, 0]),
     ]),
     // the table and basket are real furniture — no fade tracks, they are simply there
 
     // ---- the medicine itself, on stage for both demonstrations ----
     track('demoBox', 'visible', steps([
-      [0, true], [5.1, false], [11.2, true], [14.3, false], [19.6, true], [23.4, false],
+      [0, false], [11.2, true], [14.3, false], [19.6, true], [23.4, false],
     ])),
     track('demoBox', 'opacity', [
-      k(0, 1), k(4.8, 1), k(5.05, 0, 'smooth'),
       k(11.2, 0), k(11.8, 1, 'smooth'), k(14.2, 1),
       k(19.6, 0), k(20.4, 1, 'smooth'), k(22.8, 1), k(23.4, 0, 'smooth'),
     ]),
     track('demoBox', 'position', [
-      // it lies in the case, so it rides the shelf and the lift with it
-      k(0, [BOX_ON_SHELF[0], BOX_ON_SHELF[1] - 0.006, BOX_ON_SHELF[2]]),
-      k(4.35, [BOX_ON_SHELF[0], BOX_ON_SHELF[1] - 0.006, BOX_ON_SHELF[2]], 'standard'),
-      k(4.8, [LIFTED[0], LIFTED[1] - 0.006, LIFTED[2]], 'smooth'),
-      k(5.05, [LIFTED[0], LIFTED[1] - 0.006, LIFTED[2]]),
+      k(0, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
       k(11.2, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
       k(13.6, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
       // up out of the open tray, then away — the shot stays with the case, which is
@@ -357,9 +366,8 @@ export const patientCollectOpd: SceneDef = {
       k(26.4, CARTON),
     ]),
     track('demoBox', 'rotation', [
-      // flat in the case, matching the case's yaw at each station
-      k(0, [-Math.PI / 2, 0, Math.PI / 2 + 0.2]),
-      k(5.05, [-Math.PI / 2, 0, Math.PI / 2 + 0.2]),
+      // flat in the case at the demonstration, then square to camera for the apply beat
+      k(0, [-Math.PI / 2, 0, Math.PI / 2]),
       k(11.2, [-Math.PI / 2, 0, Math.PI / 2]),
       k(14.2, [-Math.PI / 2, 0, Math.PI / 2]),
       k(14.5, [0, 0, 0]),

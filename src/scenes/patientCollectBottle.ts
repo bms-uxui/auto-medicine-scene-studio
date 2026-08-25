@@ -50,10 +50,17 @@ const SCREEN_VIEW: [number, number, number] = [A.screen[0], A.screen[1] - 0.1, A
  */
 const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] + 0.055, A.pickupShelf[2] + 0.05]
 /**
- * Where the bottle ends up as she lifts it clear of the shelf — and where her hand is
- * standing when it gets there. The grab is tuned around those two meeting.
+ * Where the bottle ends up as she draws it out of the bay, and how it is turned when it
+ * gets there.
+ *
+ * These are not staged by eye: they are the world pose of the copy that rides her hand,
+ * read off the rig at the handover. The two used to be about 12 cm apart in depth, and
+ * since the crossfade swaps one for the other, that showed as the bottle jumping
+ * forward and flattening out. Matching them makes the swap invisible — what the shot
+ * shows is one bottle, lifted out of the bay and turned over in her hand.
  */
-const LIFTED: [number, number, number] = [ON_SHELF[0], ON_SHELF[1] + 0.04, ON_SHELF[2] + 0.046]
+const LIFTED: [number, number, number] = [0.4256, 0.7223, 0.4953]
+const LIFTED_TURN: [number, number, number] = [-0.368, 0.82, 0.004]
 
 /**
  * What her hand is aimed at during the grab. The grip lands a little short along the line
@@ -111,7 +118,7 @@ function bottleActors(): ActorDef[] {
       kind: 'prop',
       primitive: 'sticker',
       // narrower than the boxed flow's: it has to sit inside the curve of the bottle
-      scale: 0.4,
+      scale: 0.34,
       label: 'Demo · sticker',
       position: [STAGE[0], STAGE[1], STAGE[2] + 0.06],
       visible: false,
@@ -149,7 +156,7 @@ export const patientCollectBottle: SceneDef = {
       // rig locks its screen-space aim half a second after the reach stops changing, so a
       // camera still moving through the grab leaves the hand grasping at thin air
       k(3.2, shot(ON_SHELF, 1.06, 34, 13), 'smooth'),
-      k(5.1, shot(ON_SHELF, 1.02, 34, 13), 'smooth'),
+      k(5.2, shot(ON_SHELF, 1.02, 34, 13), 'smooth'),
       // out of the insert and back onto her, then across the cabinet face to the window
       k(6.5, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(7.1, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -173,7 +180,7 @@ export const patientCollectBottle: SceneDef = {
       k(1.6, DOOR, 'smooth'),
       k(3.2, DOOR, 'smooth'),
       k(3.2, ON_SHELF, 'smooth'),
-      k(5.1, ON_SHELF),
+      k(5.2, ON_SHELF),
       k(6.5, FRONT_WIDE, 'smooth'),
       k(7.1, FRONT_WIDE),
       k(8.0, SCAN, 'smooth'),
@@ -188,7 +195,7 @@ export const patientCollectBottle: SceneDef = {
     ]),
     custom('camera', 'fov', [
       k(0, FOV), k(0.4, FOV), k(2.6, 20, 'smooth'),
-      k(3.2, 23, 'smooth'), k(5.1, 23), k(6.5, 24, 'smooth'), k(7.1, 24),
+      k(3.2, 23, 'smooth'), k(5.2, 23), k(6.5, 24, 'smooth'), k(7.1, 24),
       k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(13.4, 23, 'smooth'),
       k(14.2, 24, 'smooth'), k(16.6, 24), k(17.6, 22, 'smooth'), k(19.4, 22),
     ]),
@@ -242,7 +249,7 @@ export const patientCollectBottle: SceneDef = {
        * once the camera has pulled out again.
        */
       k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
-      k(5.1, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(19.4, 0.45),
+      k(5.2, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(19.4, 0.45),
     ]),
     // into the bay -> up to the scan window -> down while the sticker prints -> up to
     // the slot -> resting on the bottle
@@ -257,7 +264,7 @@ export const patientCollectBottle: SceneDef = {
       k(1.4, 0), k(3.0, 0, 'accelerate'),
       k(3.9, 0.87, 'decelerate'),
       k(4.15, 1, 'smooth'),
-      k(5.05, 1, 'smooth'),
+      k(5.15, 1, 'smooth'),
       k(5.6, 0.6, 'smooth'), k(6.4, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
       k(10.4, 0.12, 'smooth'), k(11.2, 0.12),
       k(12.0, 1, 'smooth'), k(13.0, 1), k(13.6, 0.55, 'smooth'), k(19.4, 0.55),
@@ -271,12 +278,12 @@ export const patientCollectBottle: SceneDef = {
       k(3.0, 0, 'decelerate'),
       k(3.7, 0.63, 'smooth'),
       k(4.15, 0.72, 'smooth'),
-      k(5.05, 0.72, 'smooth'),
+      k(5.15, 0.72, 'smooth'),
       k(5.9, 0, 'smooth'), k(19.4, 0),
     ]),
     custom('patient', 'reachTarget', [
       k(0, GRAB_AIM),
-      k(5.05, GRAB_AIM),
+      k(5.15, GRAB_AIM),
       k(7.1, READ_HIGH, 'smooth'),
       k(11.4, READ_HIGH),
       k(12.0, TAKE, 'smooth'),
@@ -286,16 +293,16 @@ export const patientCollectBottle: SceneDef = {
     ]),
 
     // ---- props in her hand ----
-    track('handBottle', 'visible', steps([[0, false], [4.8, true], [13.4, false]])),
+    track('handBottle', 'visible', steps([[0, false], [4.95, true], [13.4, false]])),
     track('handBottle', 'opacity', [
       // a short crossfade: any longer and the bottle on the shelf and the one in her
       // hand are both legible at once, which reads as two bottles
-      k(4.8, 0), k(5.05, 1, 'smooth'), k(12.7, 1), k(13.4, 0, 'smooth'),
+      k(4.95, 0), k(5.1, 1, 'smooth'), k(12.7, 1), k(13.4, 0, 'smooth'),
     ]),
     track('handBottle', 'rotation', [
-      k(5.05, [0.05, -0.3, 0.1]),
-      k(7.1, [0.05, -0.2, 0], 'smooth'),
-      k(7.4, [0.05, -0.2, 0]),
+      k(4.9, [0.05, -0.3, 0.75]),
+      k(7.1, [0.05, -0.2, 0.65], 'smooth'),
+      k(7.4, [0.05, -0.2, 0.65]),
       // the QR is wrapped on the front of the glass, so the front is turned to the reader
       k(8.6, [0.05, -0.05, 0.06], 'smooth'),
       k(12.7, [0.05, -0.05, 0.06]),
@@ -310,10 +317,10 @@ export const patientCollectBottle: SceneDef = {
     track('label', 'rotation', [k(13.0, [0.2, -0.3, 0.25]), k(14.0, [0.05, -0.2, 0.02], 'smooth')]),
 
     // ---- the bottle: on the shelf, then staged for the applying demonstration ----
-    track('bottle', 'visible', steps([[0, true], [5.1, false], [13.8, true]])),
+    track('bottle', 'visible', steps([[0, true], [5.15, false], [13.8, true]])),
     track('bottle', 'opacity', [
       // it lifts off the shelf and crossfades into the one in her hand
-      k(0, 1), k(4.8, 1), k(5.05, 0, 'smooth'),
+      k(0, 1), k(4.95, 1), k(5.1, 0, 'smooth'),
       k(13.8, 0), k(14.4, 1, 'smooth'), k(19.4, 1),
     ]),
     track('bottle', 'position', [
@@ -324,14 +331,16 @@ export const patientCollectBottle: SceneDef = {
       // the shelf and stops where the hand is standing, so the two stay together through
       // the crossfade
       k(4.35, ON_SHELF, 'standard'),
-      k(4.8, LIFTED, 'smooth'),
-      k(5.05, LIFTED),
+      k(4.95, LIFTED, 'smooth'),
+      k(5.15, LIFTED),
       k(13.8, STAGE),   // repositioned while invisible, ready for the apply demo
       k(19.4, STAGE),
     ]),
     track('bottle', 'rotation', [
       k(0, [0, 0.2, 0]),
-      k(5.05, [0, 0.2, 0]),
+      k(4.35, [0, 0.2, 0], 'smooth'),
+      k(4.95, LIFTED_TURN, 'smooth'),
+      k(5.15, LIFTED_TURN),
       k(13.8, [0, -0.14, 0]),
     ]),
 
@@ -342,10 +351,10 @@ export const patientCollectBottle: SceneDef = {
     track('demoLabel', 'position', [
       // it fades in curled a short way off the glass and is pressed straight onto it,
       // finishing on the curve just below the label already printed there
-      k(13.6, [STAGE[0], STAGE[1] - 0.012, STAGE[2] + 0.072], 'smooth'),
-      k(15.0, [STAGE[0], STAGE[1] - 0.016, STAGE[2] + 0.052], 'smooth'),
-      k(15.8, [STAGE[0], STAGE[1] - 0.019, STAGE[2] + 0.0295], 'decelerate'),
-      k(16.1, [STAGE[0], STAGE[1] - 0.019, STAGE[2] + 0.0295]),
+      k(13.6, [STAGE[0], STAGE[1] - 0.018, STAGE[2] + 0.068], 'smooth'),
+      k(15.0, [STAGE[0], STAGE[1] - 0.022, STAGE[2] + 0.047], 'smooth'),
+      k(15.8, [STAGE[0], STAGE[1] - 0.026, STAGE[2] + 0.0248], 'decelerate'),
+      k(16.1, [STAGE[0], STAGE[1] - 0.026, STAGE[2] + 0.0248]),
     ]),
     track('demoLabel', 'rotation', [
       k(13.6, [0.28, -0.22, 0.12], 'smooth'),
