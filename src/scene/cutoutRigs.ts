@@ -60,7 +60,16 @@ export const CUTOUT_RIGS: Record<string, CutoutRigDef> = {
     art: { w: 452, h: 977 },
     limbIds: ['path1674', 'path2071'],
     shoulder: [180, 250],
-    grip: [404, 296],
+    /*
+     * The middle of the palm, not the fingertips.
+     *
+     * This is the point the aim lines up with the target and the point a held prop hangs
+     * off, so putting it out at the end of the hand had the case sitting beyond her
+     * fingers rather than in them. The palm is the wide part between the wrist at 360 and
+     * the knuckles at 415; this is its centre, and with the aim on it the fingers close
+     * over what she is holding.
+     */
+    grip: [384, 305],
     pivotX: 0.32,
     swing: [-1.2, 0.9],
     rest: -0.85,

@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1127, 0.1142, -0.0279]
-const CONTACT_TURN: [number, number, number] = [0.9688, -0.3179, 1.3383]
+const CONTACT: [number, number, number] = [0.1481, 0.1069, -0.0279]
+const CONTACT_TURN: [number, number, number] = [0.9597, -0.3553, 1.3108]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -76,14 +76,14 @@ const CONTACT_TURN: [number, number, number] = [0.9688, -0.3179, 1.3383]
  * object being posed rather than one being taken — and only turns flat once it is clear of
  * the cabinet and on its way to the reader.
  */
-const CARRY: [number, number, number] = [0.004, -0.044, -0.052]
+const CARRY: [number, number, number] = [0.075, -0.03, -0.052]
 /**
  * Where it rides while it is still turned exactly as it came off the shelf. Held on edge
  * like that the case reaches 9.4 cm towards the camera from its own centre — more than
  * twice what it needs lying flat — so it has to ride that much further back to stay behind
  * the drawn fist, and only comes forward to `CARRY` once it is flat for the reader.
  */
-const HOLD: [number, number, number] = [0.004, -0.044, -0.112]
+const HOLD: [number, number, number] = [0.085, -0.02, -0.112]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
 const RAISE_TURN: [number, number, number] = [1.45, -0.15, 0.06]
 const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
@@ -460,10 +460,13 @@ export const patientCollectOpd: SceneDef = {
       k(4.0999, BOX_ON_SHELF, 'linear'),
       // ---- held: an offset in her hand's frame ----
       k(4.1, CONTACT),
+      // The contact offset is where the case is standing, not where her hand is: the rig
+      // cannot lengthen the arm, so the grip lands short and the case is caught a hand's
+      // width up and out from the palm. It settles into the palm as the fingers close,
+      // while the hand is still down inside the bay and the move is not on show — held
+      // out there any longer it simply rides behind her forearm.
       k(4.2, CONTACT, 'smooth'),
-      // out of the bay riding deep, because it is still on edge; it only comes forward in
-      // her hand once it has turned flat for the reader
-      k(5.4, HOLD, 'smooth'),
+      k(4.7, HOLD, 'smooth'),
       k(7.2, HOLD, 'smooth'),
       k(7.8, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
