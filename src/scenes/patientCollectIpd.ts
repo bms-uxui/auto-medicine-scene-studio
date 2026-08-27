@@ -96,6 +96,11 @@ export const patientCollectIpd: SceneDef = {
       k(6.8, 1), k(7.6, 0, 'smooth'), k(16.59, 0), k(17.75, 1, 'smooth'),
       k(20.95, 1), k(21.69, 0, 'smooth'), k(24.39, 0), k(25.74, 1, 'smooth'), k(30.34, 1),
     ]),
+    // the room goes with the cabinet: the demonstrations play in an empty white space
+    track('lobby', 'opacity', [
+      k(6.8, 1), k(7.6, 0, 'smooth'), k(16.59, 0), k(17.75, 1, 'smooth'),
+      k(20.95, 1), k(21.69, 0, 'smooth'), k(24.39, 0), k(25.74, 1, 'smooth'), k(30.34, 1),
+    ]),
 
     // ---- patient ----
     track('patient', 'visible', steps([[0, false], [0.6, true]])),

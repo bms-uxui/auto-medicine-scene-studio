@@ -54,6 +54,15 @@ export const BUTTON: [number, number, number] = [A.screen[0], A.screen[1] - 0.22
 /** Everything on stage. Both flows use the same cast; only the timing differs. */
 export function collectActors(): ActorDef[] {
   return [
+    {
+      // the room the machine stands in — see `HospitalLobby`. First in the cast so it is
+      // built before anything that has to sit in front of it.
+      id: 'lobby',
+      kind: 'prop',
+      primitive: 'hospitalLobby',
+      label: 'Hospital lobby',
+      position: [0, 0, 0],
+    },
     { id: 'kiosk', kind: 'kiosk', label: 'Kiosk', position: [0, 0, 0] },
     {
       id: 'patient',

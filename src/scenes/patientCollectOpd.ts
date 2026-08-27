@@ -314,6 +314,11 @@ export const patientCollectOpd: SceneDef = {
       k(0, 1), k(9.9, 1), k(10.5, 0, 'smooth'), k(15.6, 0), k(16.4, 1, 'smooth'),
       k(19.4, 1), k(20.2, 0, 'smooth'), k(22.8, 0), k(24.0, 1, 'smooth'), k(26.4, 1),
     ]),
+    // the room goes with the cabinet: the demonstrations play in an empty white space
+    track('lobby', 'opacity', [
+      k(0, 1), k(9.9, 1), k(10.5, 0, 'smooth'), k(15.6, 0), k(16.4, 1, 'smooth'),
+      k(19.4, 1), k(20.2, 0, 'smooth'), k(22.8, 0), k(24.0, 1, 'smooth'), k(26.4, 1),
+    ]),
 
     // ---- patient ----
     track('patient', 'visible', steps([[0, false], [1.4, true]])),

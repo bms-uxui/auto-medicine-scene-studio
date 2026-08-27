@@ -26,6 +26,15 @@ export const staffScan: SceneDef = {
   background: '#ffffff',
   camera: { position: shot(FULL, DIST.wide, 35, 13), target: FULL, fov: FOV },
   actors: [
+    {
+      // the room the machine stands in — see `HospitalLobby`. First in the cast so it is
+      // built before anything that has to sit in front of it.
+      id: 'lobby',
+      kind: 'prop',
+      primitive: 'hospitalLobby',
+      label: 'Hospital lobby',
+      position: [0, 0, 0],
+    },
     { id: 'kiosk', kind: 'kiosk', label: 'Kiosk', position: [0, 0, 0] },
     {
       id: 'staff',

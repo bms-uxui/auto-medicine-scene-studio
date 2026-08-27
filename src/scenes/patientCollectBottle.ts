@@ -113,6 +113,15 @@ const STAGE: [number, number, number] = [DEMO[0] + 0.07, DEMO[1] + 0.09, DEMO[2]
  */
 function bottleActors(): ActorDef[] {
   return [
+    {
+      // the room the machine stands in — see `HospitalLobby`. First in the cast so it is
+      // built before anything that has to sit in front of it.
+      id: 'lobby',
+      kind: 'prop',
+      primitive: 'hospitalLobby',
+      label: 'Hospital lobby',
+      position: [0, 0, 0],
+    },
     { id: 'kiosk', kind: 'kiosk', label: 'Kiosk', position: [0, 0, 0] },
     {
       id: 'patient',
@@ -325,6 +334,10 @@ export const patientCollectBottle: SceneDef = {
     custom('kiosk', 'stickerFeed', [k(9.8, 0), k(11.4, 1, 'decelerate'), k(12.5, 1)]),
     // the cabinet dissolves away for the applying demonstration and comes back after it
     track('kiosk', 'opacity', [
+      k(0, 1), k(11.8, 1), k(12.5, 0, 'smooth'), k(15.1, 0), k(16.0, 1, 'smooth'), k(18.5, 1),
+    ]),
+    // the room goes with the cabinet: the demonstration plays in an empty white space
+    track('lobby', 'opacity', [
       k(0, 1), k(11.8, 1), k(12.5, 0, 'smooth'), k(15.1, 0), k(16.0, 1, 'smooth'), k(18.5, 1),
     ]),
 

@@ -459,6 +459,169 @@ export function SyrupCarton(props: React.ComponentProps<'group'>) {
   )
 }
 
+/**
+ * The wayfinding sign on the wall: a pale panel with a cross, the department and an arrow.
+ * Deliberately low-contrast — it is there to say "hospital", not to be read.
+ */
+function signTexture() {
+  const canvas = document.createElement('canvas')
+  const W = 720
+  const H = 260
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const TH = (weight: number, size: number) =>
+    `${weight} ${size}px "Noto Sans Thai", Inter, Helvetica, Arial, sans-serif`
+
+  ctx.fillStyle = '#f7f9fa'
+  ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = '#dfe8ec'
+  ctx.fillRect(0, 0, 210, H)
+  // the cross, drawn as two bars rather than a glyph so no font has to carry it
+  ctx.fillStyle = '#8fb3c2'
+  ctx.fillRect(88, 62, 34, 136)
+  ctx.fillRect(37, 113, 136, 34)
+
+  ctx.fillStyle = '#5d6b73'
+  ctx.font = TH(600, 62)
+  ctx.fillText('ห้องจ่ายยา', 246, 122)
+  ctx.font = TH(400, 40)
+  ctx.fillStyle = '#8d979d'
+  ctx.fillText('Pharmacy', 248, 182)
+
+  // arrow to the right, three strokes
+  ctx.strokeStyle = '#9fb0b8'
+  ctx.lineWidth = 9
+  ctx.beginPath()
+  ctx.moveTo(600, 130)
+  ctx.lineTo(680, 130)
+  ctx.moveTo(650, 100)
+  ctx.lineTo(682, 130)
+  ctx.lineTo(650, 160)
+  ctx.stroke()
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  return tex
+}
+
+/**
+ * The room the kiosk stands in.
+ *
+ * Everything used to float on a white cyclorama, which reads as a product shot rather than
+ * as a machine installed somewhere — at the establishing width there was no floor line, no
+ * horizon and nothing to say the patient had walked into a hospital.
+ *
+ * It is dressed to be ignored: the wall and floor are a shade off white and the dressing is
+ * desaturated and kept a good two metres clear of the cabinet on both sides, so nothing
+ * competes with the machine in a wide shot or wanders into an insert. It is a prop like any
+ * other, so each film fades it out with the cabinet for the demonstrations — those play in
+ * an empty white room on purpose.
+ */
+export function HospitalLobby(props: React.ComponentProps<'group'>) {
+  const sign = useMemo(() => signTexture(), [])
+  useEffect(() => () => sign.dispose(), [sign])
+
+  /** how far behind the cabinet the wall stands */
+  const Z = -1.6
+  const WALL_W = 22
+  const WALL_H = 6.4
+  /** the height of the painted dado band, which is what gives the wall a scale */
+  const DADO = 1.15
+
+  /** one waiting chair: a seat, a back and a pair of runners */
+  const chair = (x: number, key: number) => (
+    <group key={key} position={[x, 0, Z + 0.62]}>
+      <mesh position={[0, 0.43, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.46, 0.05, 0.44]} />
+        {/* a shade of blue, not another off-white: against a pale wall the chairs had no
+            edge at all and the row read as a smudge */}
+        <meshStandardMaterial color="#b7ccd8" emissive="#9db6c4" emissiveIntensity={0.35} roughness={0.8} metalness={0} />
+      </mesh>
+      <mesh position={[0, 0.66, -0.2]} rotation={[-0.12, 0, 0]} castShadow>
+        <boxGeometry args={[0.46, 0.42, 0.05]} />
+        {/* a shade of blue, not another off-white: against a pale wall the chairs had no
+            edge at all and the row read as a smudge */}
+        <meshStandardMaterial color="#b7ccd8" emissive="#9db6c4" emissiveIntensity={0.35} roughness={0.8} metalness={0} />
+      </mesh>
+      {([1, -1] as const).map((side) => (
+        <mesh key={side} position={[side * 0.19, 0.21, 0]} castShadow>
+          <boxGeometry args={[0.03, 0.42, 0.4]} />
+          <meshStandardMaterial color="#c9d3d9" emissive="#bcc7ce" emissiveIntensity={0.35} roughness={0.6} metalness={0.1} />
+        </mesh>
+      ))}
+    </group>
+  )
+
+  return (
+    <group {...props}>
+      {/* the wall, in two tones with a skirting along the bottom */}
+      <mesh position={[0, WALL_H / 2, Z]} receiveShadow>
+        <planeGeometry args={[WALL_W, WALL_H]} />
+        {/* the wall faces the camera and takes almost no key, so it is painted well up
+            towards white or it renders as mid grey and the room reads as a basement */}
+        <meshStandardMaterial color="#ffffff" emissive="#eef4f7" emissiveIntensity={0.55} roughness={1} metalness={0} />
+      </mesh>
+      <mesh position={[0, DADO / 2, Z + 0.004]} receiveShadow>
+        <planeGeometry args={[WALL_W, DADO]} />
+        <meshStandardMaterial color="#e8eff2" emissive="#dbe6ec" emissiveIntensity={0.45} roughness={1} metalness={0} />
+      </mesh>
+      <mesh position={[0, DADO, Z + 0.006]}>
+        <planeGeometry args={[WALL_W, 0.012]} />
+        <meshStandardMaterial color="#cfdae0" emissive="#c6d3da" emissiveIntensity={0.4} roughness={1} metalness={0} />
+      </mesh>
+      <mesh position={[0, 0.045, Z + 0.02]}>
+        <boxGeometry args={[WALL_W, 0.09, 0.04]} />
+        <meshStandardMaterial color="#dde5e9" emissive="#cfd9df" emissiveIntensity={0.35} roughness={1} metalness={0} />
+      </mesh>
+
+      {/*
+        The floor. It sits a millimetre and a half above the stage's own shadow-catcher
+        rather than replacing it: that plane is pure white and is what the contact shadows
+        are tuned against, and it is what shows through when the room fades for a
+        demonstration.
+      */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0015, 0]} receiveShadow>
+        <planeGeometry args={[26, 26]} />
+        <meshStandardMaterial color="#f1f4f5" roughness={0.92} metalness={0} />
+      </mesh>
+
+      {/* wayfinding, well off to the left of the cabinet */}
+      <mesh position={[-2.55, 1.92, Z + 0.03]}>
+        <planeGeometry args={[1.12, 0.4]} />
+        <meshStandardMaterial map={sign} roughness={0.85} metalness={0} />
+      </mesh>
+
+      {/* a row of waiting chairs against the wall, left of the machine */}
+      {[-3.15, -2.6, -2.05].map((x, i) => chair(x, i))}
+
+      {/* and a plant on the other side, to stop the right of the frame going empty */}
+      <group position={[2.35, 0, Z + 0.55]}>
+        <mesh position={[0, 0.17, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.17, 0.13, 0.34, 20]} />
+          <meshStandardMaterial color="#eceff1" emissive="#dfe4e7" emissiveIntensity={0.35} roughness={0.9} metalness={0} />
+        </mesh>
+        <mesh position={[0, 0.345, 0]}>
+          <cylinderGeometry args={[0.16, 0.16, 0.02, 20]} />
+          <meshStandardMaterial color="#5f6f63" roughness={1} metalness={0} />
+        </mesh>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh
+            key={i}
+            position={[Math.sin(i * 1.3) * 0.1, 0.62 + (i % 3) * 0.12, Math.cos(i * 1.3) * 0.08]}
+            rotation={[0.1, i * 1.3, Math.sin(i) * 0.35]}
+            castShadow
+          >
+            <planeGeometry args={[0.2, 0.46]} />
+            <meshStandardMaterial color="#c8dbca" emissive="#a9c3ac" emissiveIntensity={0.4} roughness={0.9} metalness={0} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  )
+}
+
 /** Medicine box the machine dispenses. */
 export function MedicineBox(props: React.ComponentProps<'group'>) {
   const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Take 1 tablet after meals', 'Qty 30'], BRAND.blue), [])
@@ -884,6 +1047,7 @@ export const PROP_COMPONENTS = {
   medicinePackage: MedicinePackage,
   medicineBottle: MedicineBottle,
   syrupCarton: SyrupCarton,
+  hospitalLobby: HospitalLobby,
   medicineBoxArt: MedicineBoxArt,
   medicineBox: MedicineBox,
   sticker: Sticker,
