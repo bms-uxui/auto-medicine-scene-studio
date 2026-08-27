@@ -35,8 +35,18 @@ else
   git -C "$WORKTREE" rm -rf . >/dev/null 2>&1 || true
 fi
 
-rsync -a --delete --exclude .git dist/ "$WORKTREE"/
+# --checksum, not rsync's default size-and-mtime quick check: `index.html` is the same
+# length whatever asset hash it names, so a build whose only change was the hash left the
+# published page pointing at a file that had just been renamed away — the deploy went
+# through, and the live page came up black.
+rsync -a --delete --checksum --exclude .git dist/ "$WORKTREE"/
 git -C "$WORKTREE" add -A
+
+# and check what is about to be published, not what was built: the guard above proves the
+# build is coherent, this proves the copy of it is
+for ref in $(grep -o '/[^"]*/assets/[^"]*' "$WORKTREE/index.html"); do
+  [ -f "$WORKTREE/${ref#/*/}" ] || { echo "staged index.html references a missing asset: $ref" >&2; exit 1; }
+done
 git -C "$WORKTREE" commit -m "Deploy $(git rev-parse --short HEAD)" || echo "nothing to deploy"
 git -C "$WORKTREE" push origin gh-pages
 git worktree remove --force "$WORKTREE"

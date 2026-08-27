@@ -36,7 +36,9 @@
   min-height: 100vh;
   background: #fff;
   color: var(--ink);
-  font-family: 'Helvetica Neue', Helvetica, Arial, 'Noto Sans Thai', system-ui, sans-serif;
+  /* one face for both scripts: the page is Thai first, and Helvetica for the Latin
+     glyphs left the two sitting at different weights and heights in the same line */
+  font-family: 'Noto Sans Thai', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
