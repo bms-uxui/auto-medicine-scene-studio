@@ -1,7 +1,7 @@
 import type { ActorDef, SceneDef, Vec3 } from '../anim/types'
 import type { Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
-import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE, TAKE } from './collectCommon'
+import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE } from './collectCommon'
 
 /**
  * The other half of the collecting-medicine flow: an item that never goes in a case.
@@ -145,16 +145,6 @@ function bottleActors(): ActorDef[] {
       position: [STAGE[0], STAGE[1], STAGE[2] + 0.06],
       visible: false,
     },
-    {
-      id: 'label',
-      kind: 'prop',
-      primitive: 'sticker',
-      label: 'Printed sticker',
-      scale: 0.62,
-      position: [0, -0.02, 0.05],
-      visible: false,
-      params: { attachTo: 'patient:grip' },
-    },
   ]
 }
 
@@ -208,7 +198,7 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
  * right — pulling straight back onto her puts her shoulder across the frame.
  */
 const PULL_T0 = 4.3
-const PULL_T1 = 6.6
+const PULL_T1 = 6.2
 const PULL_STEPS = 24
 /**
  * How far out it gets. The pull used to start at 3.25, a second and a third before the
@@ -219,7 +209,7 @@ const PULL_STEPS = 24
  * starts three tenths before the handover, as the boxed flow's does — moving on the frame
  * that matters, but from the tight framing rather than well outside it.
  */
-const PULL_DIST = 2.4
+const PULL_DIST = 2.62
 /** where the frame ends up: the open bay, lifted for the arm coming up out of it */
 const PULL_HIGH: Vec3 = [DOOR[0], DOOR[1] + 0.16, DOOR[2]]
 /**
@@ -238,7 +228,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
     // it follows the lift out of the bay first, then settles on the open bay itself
     target: u < 0.45 ? mix(ON_SHELF, LIFT_VIEW, u / 0.45) : mix(LIFT_VIEW, PULL_HIGH, (u - 0.45) / 0.55),
     dist: PUSH_DIST * Math.pow(PULL_DIST / PUSH_DIST, u),
-    yaw: 34.6 + (42 - 34.6) * u,
+    yaw: 34.6 + (36 - 34.6) * u,
     pitch: 13 + (12 - 13) * u,
     ease: (i === PULL_STEPS ? 'smooth' : 'linear') as Ease,
   }
@@ -265,16 +255,23 @@ export const patientCollectBottle: SceneDef = {
       // a beat at the tightest framing while her hand comes into the bay, then straight
       // back out again under the grab — see `pull` above
       ...pull.map((s) => k(s.t, shot(s.target, s.dist, s.yaw, s.pitch), s.ease)),
-      // then back onto her, and across the cabinet face to the window
-      k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
+      /*
+       * Then back onto her, and across the cabinet face to the window. This used to be one
+       * tenth of a second after the pull's last key, which asked the camera to cross most
+       * of a metre and fourteen degrees of yaw in three frames — the pull ran out and the
+       * frame snapped. The pull now finishes at 6.2, closer to where this shot starts, and
+       * has half a second to get there.
+       */
       k(7.2, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
+      k(7.5, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(8.0, shot(SCAN, 2.0, 40, 9), 'smooth'),
       k(9.8, shot(SCAN, 1.72, 40, 9), 'smooth'),                  // slow push while it reads
       k(10.8, shot(SLOT_VIEW, 1.95, 34, 10), 'smooth'),           // 2 · Collecting Sticker
-      k(12.6, shot(TAKE, 1.5, 38, 10), 'smooth'),
-      // The move to the demo happens on an empty white frame — it used to start while the
-      // cabinet and the figure were still up, and flew the camera straight through both.
-      k(13.4, shot(TAKE, 1.5, 38, 10), 'smooth'),
+      // She does not take it. There is nothing to take it out of — the sticker is the
+      // demonstration's subject, and reaching for it only to have it dissolve out of her
+      // hand a second later was a move that led nowhere. The shot creeps in on the slot
+      // while it prints and then dissolves straight to the demonstration.
+      k(13.4, shot(SLOT_VIEW, 1.72, 34, 10), 'smooth'),
       // 3 · Applying Sticker — the sticker carries the shot from the slot to the staging
       k(14.2, shot(STAGE, 0.64, 0, 0), 'smooth'),
       // the demonstration is over when the sticker is down; it used to sit on a finished
@@ -288,13 +285,12 @@ export const patientCollectBottle: SceneDef = {
       k(0, FULL),
       ...push.map((s) => k(s.t, s.target, s.ease)),
       ...pull.map((s) => k(s.t, s.target, s.ease)),
-      k(6.7, FRONT_WIDE, 'smooth'),
-      k(7.2, FRONT_WIDE),
+      k(7.2, FRONT_WIDE, 'smooth'),
+      k(7.5, FRONT_WIDE),
       k(8.0, SCAN, 'smooth'),
       k(9.8, SCAN),
       k(10.8, SLOT_VIEW, 'smooth'),
-      k(12.6, TAKE, 'smooth'),
-      k(13.4, TAKE),
+      k(13.4, SLOT_VIEW),
       k(14.2, STAGE, 'smooth'),
       k(16.0, STAGE),
       k(17.1, SCREEN_VIEW, 'smooth'),
@@ -303,7 +299,7 @@ export const patientCollectBottle: SceneDef = {
     custom('camera', 'fov', [
       // held through the push: a focal length changing under a dolly is a second move on
       // top of the first, and they do not cancel
-      k(0, 23), k(4.3, 23), k(6.6, 23, 'smooth'), k(6.7, 24, 'smooth'), k(7.2, 24),
+      k(0, 23), k(4.3, 23), k(6.2, 23, 'smooth'), k(7.2, 24, 'smooth'), k(7.5, 24),
       k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(13.4, 23, 'smooth'),
       k(14.2, 24, 'smooth'), k(16.0, 24), k(17.1, 22, 'smooth'), k(19.4, 22),
     ]),
@@ -324,9 +320,9 @@ export const patientCollectBottle: SceneDef = {
     custom('kiosk', 'scanReach', [k(0, 0.34), k(8.6, 0.34), k(9.2, 0.30, 'decelerate'), k(19.4, 0.30)]),
     custom('kiosk', 'scanSpread', [k(0, 0.1), k(8.6, 0.1), k(9.2, 0.19, 'decelerate'), k(19.4, 0.19)]),
     custom('kiosk', 'scanTilt', [k(0, 0.16), k(8.6, 0.16), k(9.2, -0.26, 'smooth'), k(19.4, -0.26)]),
-    custom('kiosk', 'stickerFeed', [
-      k(9.8, 0), k(11.4, 1, 'decelerate'), k(12.8, 1), k(13.2, 0, 'accelerate'),
-    ]),
+    // it stays hanging out of the slot and goes with the cabinet, rather than being
+    // drawn back in behind a hand that is no longer reaching for it
+    custom('kiosk', 'stickerFeed', [k(9.8, 0), k(11.4, 1, 'decelerate'), k(13.4, 1)]),
     // the cabinet dissolves away for the applying demonstration and comes back after it
     track('kiosk', 'opacity', [
       k(0, 1), k(12.7, 1), k(13.4, 0, 'smooth'), k(16.0, 0), k(16.9, 1, 'smooth'), k(19.4, 1),
@@ -380,8 +376,8 @@ export const patientCollectBottle: SceneDef = {
       // she does not drop her arm to her side while the sticker prints: at this framing
       // that put her hand and the bottle below the bottom edge and left her cut off in the
       // corner of the frame. She holds the bottle where she can see it and waits.
-      k(10.4, 0.42, 'smooth'), k(11.2, 0.42),
-      k(12.0, 1, 'smooth'), k(13.0, 1), k(13.6, 0.55, 'smooth'), k(19.4, 0.55),
+      k(10.4, 0.42, 'smooth'), k(13.4, 0.42),
+      k(13.6, 0.55, 'smooth'), k(19.4, 0.55),
     ]),
     custom('patient', 'bend', [
       /*
@@ -410,22 +406,10 @@ export const patientCollectBottle: SceneDef = {
       k(5.4, LIFT_AIM, 'smooth'),
       k(5.9, LIFT_AIM),
       k(7.2, READ_HIGH, 'smooth'),
-      k(11.4, READ_HIGH),
-      k(12.0, TAKE, 'smooth'),
-      k(13.0, TAKE),
+      k(13.4, READ_HIGH),
       k(13.6, READ, 'smooth'),
       k(19.4, READ),
     ]),
-
-    // ---- props in her hand ----
-    // the printed sticker rides in her hand from the slot into the applying demonstration
-    track('label', 'visible', steps([[0, false], [13.0, true], [13.6, false]])),
-    track('label', 'opacity', [k(13.0, 1), k(13.2, 1), k(13.6, 0, 'smooth')]),
-    track('label', 'position', [
-      k(13.0, [0.024, 0.07, 0.075], 'decelerate'),
-      k(14.0, [0.004, 0.02, 0.065], 'smooth'),
-    ]),
-    track('label', 'rotation', [k(13.0, [0.2, -0.3, 0.25]), k(14.0, [0.05, -0.2, 0.02], 'smooth')]),
 
     // ---- the bottle: one object, from the shelf to the demonstration ----
     /*
