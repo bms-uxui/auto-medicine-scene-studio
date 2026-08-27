@@ -26,7 +26,7 @@ const LANG_LABEL: Record<Lang, string> = { th: 'TH', en: 'EN' }
 const THAI_TITLE: Record<string, string> = {
   'patient-scan-qr': 'ผู้ป่วย · สแกนคิวอาร์โค้ด',
   'patient-collect-opd': 'ผู้ป่วย · รับยา (ยาที่อยู่ในกล่อง)',
-  'patient-collect-bottle': 'ผู้ป่วย · รับยา (ยาที่ไม่ได้อยู่ในกล่อง)',
+  'patient-collect-bottle': 'ผู้ป่วย · รับยา (ยาที่ใส่กล่องไม่ได้)',
   'patient-collect-ipd': 'ผู้ป่วย · รับยา (IPD)',
   'staff-scan-barcode': 'เจ้าหน้าที่ · สแกนคิวอาร์โค้ดใบเติมยา',
 }

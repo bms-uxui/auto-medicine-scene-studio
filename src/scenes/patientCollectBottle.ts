@@ -6,23 +6,23 @@ import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE } from './collectC
 /**
  * The other half of the collecting-medicine flow: an item that never goes in a case.
  *
- * A bottle of oral solution will not fit a plastic case, so the hospital sticks the QR
- * code on the bottle itself and the pharmacy sticker goes back onto the same bottle.
+ * A carton of syrup will not fit a plastic case, so the hospital prints the QR code on the
+ * carton itself and the pharmacy sticker goes back onto the same carton.
  * There is nothing to unpack and nothing to hand back, which makes this the short flow:
  *
- *   take the bottle from the bay -> hold it up to the scan window -> collect the printed
- *   sticker -> apply it to the bottle.
+ *   take the carton from the bay -> hold it up to the scan window -> the sticker prints
+ *   -> apply it to the carton.
  *
  * The boxed flow is `patientCollectOpd`; the two are rendered as separate films.
  *
  * Beat sheet (all times chosen on 0.2s steps so the sheet stays editable):
  *   0.0- 2.6  establish, call out the bay — she walks in while it opens
  *   2.6- 4.2  the door is open: straight into the zoomed grab
- *   4.2- 5.0  the bottle lifts off the shelf and crossfades into her hand
+ *   4.2- 5.0  the carton lifts off the shelf and crossfades into her hand
  *   5.0- 7.4  pull back and walk her across to the scan window
- *   7.4- 9.8  she raises the bottle; the QR on it is read; verified at 9.2
+ *   7.4- 9.8  she raises the carton; the QR on it is read; verified at 9.2
  *   9.8-12.3  the sticker prints at the middle slot; she watches it feed
- *  12.3-15.1  dissolve to the bottle; the sticker is pressed onto it
+ *  12.3-15.1  dissolve to the carton; the sticker is pressed onto it
  *  15.1-18.5  back at the cabinet; the screen confirms the whole order is done
  */
 /** where she stands at the front of the cabinet, facing the scan window and the slot */
@@ -36,8 +36,8 @@ const AT_BAY: [number, number, number] = [0.3, 0, 0.78]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 /**
- * Where the hand goes while the bottle is read. Higher than the boxed flow's `READ`: the
- * bottle hangs below the fist, so a hand level with the window leaves the QR under the
+ * Where the hand goes while the carton is read. Higher than the boxed flow's `READ`: the
+ * carton hangs below the fist, so a hand level with the window leaves the QR under the
  * beam entirely.
  */
 const READ_HIGH: [number, number, number] = [SCAN[0], SCAN[1] + 0.03, SCAN[2] + 0.14]
@@ -52,29 +52,29 @@ const SLOT_VIEW: [number, number, number] = [SLOT[0] - 0.08, SLOT[1] - 0.1, SLOT
 const SCREEN_VIEW: [number, number, number] = [A.screen[0], A.screen[1] - 0.1, A.screen[2]]
 
 /**
- * Where the bottle waits on the shelf. It is 10.5 cm tall and drawn around its centre, so
+ * Where the carton waits on the shelf. It is 13.4 cm tall and drawn around its centre, so
  * it has to stand half of that above the shelf or it sinks into it.
  */
-const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] + 0.055, A.pickupShelf[2] + 0.05]
+const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] + 0.069, A.pickupShelf[2] + 0.05]
 /**
- * How the bottle sits in her hand at the moment she closes on it, and how it is turned
+ * How the carton sits in her hand at the moment she closes on it, and how it is turned
  * there — the offset and rotation that put the copy riding her hand exactly where the one
  * on the shelf is standing, read off the rig rather than staged by eye.
  *
- * This is what makes the pick-up a pick-up. The bottle used to travel from the shelf to
+ * This is what makes the pick-up a pick-up. It used to travel from the shelf to
  * her hand while the hand held still, so it read as floating up into her fingers. Now
  * nothing on the shelf ever moves: the copy in her hand takes over on the spot, and it is
  * her arm that lifts it out. The offset is large because the rig aims the hand in screen
- * space — on screen the fingers are on the bottle, in world they are a hand's length in
+ * space — on screen the fingers are on the carton, in world they are a hand's length in
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
- * bottle settling into her grip.
+ * carton settling into her grip.
  */
-const CONTACT: [number, number, number] = [0.1069, -0.0232, -0.0477]
-const CONTACT_TURN: [number, number, number] = [0.8189, -0.5741, 1.0793]
+const CONTACT: [number, number, number] = [0.0942, -0.0191, -0.0604]
+const CONTACT_TURN: [number, number, number] = [0.7868, -0.5691, 1.0557]
 /**
  * Where it ends up sitting in her hand once it is out. In the middle of the palm, not out
  * at the fingertips: the grip is the centre of the drawn fist, so an offset this far out
- * along the hand hung the bottle off the ends of her fingers for the whole carry. Depth is
+ * along the hand hung the carton off the ends of her fingers for the whole carry. Depth is
  * left shallow on purpose — the runtime keeps it behind the plane the hand is drawn on.
  */
 const CARRY: [number, number, number] = [0.062, -0.012, -0.03]
@@ -82,7 +82,7 @@ const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.75]
 
 /**
  * What her hand is aimed at during the grab. The grip lands a little short along the line
- * from the shoulder, so the aim is carried just above the bottle to bring the fingers
+ * from the shoulder, so the aim is carried just above the carton to bring the fingers
  * level with it.
  */
 const GRAB_AIM: [number, number, number] = [ON_SHELF[0], ON_SHELF[1] + 0.02, ON_SHELF[2]]
@@ -90,20 +90,20 @@ const GRAB_AIM: [number, number, number] = [ON_SHELF[0], ON_SHELF[1] + 0.02, ON_
 /**
  * Where the aim sits while the arm is still travelling. The arm swings about the shoulder
  * on a fixed radius, so on the way in it sweeps across the shelf rather than towards it —
- * and the bottle stands ten centimetres tall, so a hand coming in level with the aim
+ * and the carton stands thirteen centimetres tall, so a hand coming in level with the aim
  * crosses it. Coming in high keeps the fist above the cap and lets it settle onto the
- * bottle at the end, which is also how a hand reaches for something standing on a shelf.
+ * carton at the end, which is also how a hand reaches for something standing on a shelf.
  */
 const APPROACH_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.1, GRAB_AIM[2]]
 /**
  * Out of the bay before up. Whatever she holds rides behind the fist, so a hand that goes
- * straight up from the shelf takes the bottle up the inside of the front panel, where it
+ * straight up from the shelf takes the carton up the inside of the front panel, where it
  * is hidden for the whole lift. This draws the hand out of the mouth of the bay first.
  */
 const OUT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.05, GRAB_AIM[2] + 0.17]
 /** what her hand is aimed at as she draws it out — the lift is the arm, not the prop */
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
-/** where the bottle is staged for the applying demonstration */
+/** where the carton is staged for the applying demonstration */
 const STAGE: [number, number, number] = [DEMO[0] + 0.07, DEMO[1] + 0.09, DEMO[2] + 0.02]
 
 /**
@@ -124,12 +124,12 @@ function bottleActors(): ActorDef[] {
       params: { height: 1.68, tilt: 0.7, rig: 'patient-hand' },
     },
     {
-      // one bottle for the whole clip: it starts on the shelf inside the bay and is the
+      // one carton for the whole clip: it starts on the shelf inside the bay and is the
       // same object the applying demonstration stages
       id: 'bottle',
       kind: 'prop',
-      primitive: 'medicineBottle',
-      label: 'Bottle of oral solution',
+      primitive: 'syrupCarton',
+      label: 'Syrup carton',
       position: ON_SHELF,
       rotation: [0, 0.2, 0],
     },
@@ -139,7 +139,7 @@ function bottleActors(): ActorDef[] {
       id: 'demoLabel',
       kind: 'prop',
       primitive: 'sticker',
-      // narrower than the boxed flow's: it has to sit inside the curve of the bottle
+      // narrower than the boxed flow's: it has to sit inside the width of the carton
       scale: 0.34,
       label: 'Demo · sticker',
       position: [STAGE[0], STAGE[1], STAGE[2] + 0.06],
@@ -178,7 +178,7 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
   const u = v * v * (3 - 2 * v)
   return {
     t: +(PUSH_T0 + (PUSH_T1 - PUSH_T0) * v).toFixed(3),
-    // the frame settles from the whole cabinet onto the open bay, then onto the bottle
+    // the frame settles from the whole cabinet onto the open bay, then onto the carton
     target: u < 0.5 ? mix(FULL, DOOR, u * 2) : mix(DOOR, ON_SHELF, (u - 0.5) * 2),
     dist: DIST.wide * Math.pow(PUSH_DIST / DIST.wide, u),
     // the last key's easing governs the hold that follows it, not the push
@@ -189,7 +189,7 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
 /**
  * And the pull back out, built the same way as the push.
  *
- * It starts while she is still reaching, not once she has hold of the bottle: the
+ * It starts while she is still reaching, not once she has hold of the carton: the
  * handover happens at 4.6, and a frame that is already widening at that moment reads as a
  * person taking something off a shelf rather than as a prop changing hands.
  *
@@ -213,9 +213,9 @@ const PULL_DIST = 2.62
 /** where the frame ends up: the open bay, lifted for the arm coming up out of it */
 const PULL_HIGH: Vec3 = [DOOR[0], DOOR[1] + 0.16, DOOR[2]]
 /**
- * What the frame follows on the way up. Below the hand's own aim: the bottle hangs under
+ * What the frame follows on the way up. Below the hand's own aim: the carton hangs under
  * the fist rather than sitting in it, so a frame centred on where the hand is going drops
- * the bottle off its bottom edge for the whole lift.
+ * the carton off its bottom edge for the whole lift.
  */
 const LIFT_VIEW: Vec3 = [LIFT_AIM[0], LIFT_AIM[1] - 0.06, LIFT_AIM[2]]
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
@@ -247,7 +247,7 @@ export const patientCollectBottle: SceneDef = {
     // ---- shot list ----
     track('camera', 'position', [
       k(0, shot(FULL, DIST.wide, 35, 13)),
-      // one continuous push into the bay — see `push` above. It is settled on the bottle by 3.2
+      // one continuous push into the bay — see `push` above. It is settled on the carton by 3.2
       // and all but parked until she has hold of it: the rig aims her hand in screen space
       // and locks that aim half a second after the reach stops changing, so a camera still
       // moving through the grab leaves the hand grasping at thin air.
@@ -310,12 +310,12 @@ export const patientCollectBottle: SceneDef = {
     custom('kiosk', 'doorOpen', [
       k(1.6, 0), k(2.6, 1, 'decelerate'), k(5.5, 1), k(6.6, 0, 'accelerate'),
     ]),
-    // the window closes on the bottle she holds up to it — the QR is wrapped on the glass
+    // the window closes on the carton she holds up to it — the QR is wrapped on the glass
     custom('kiosk', 'scanGlow', [
       k(8.0, 0), k(8.6, 0.45, 'decelerate'), k(9.0, 0.4), k(9.2, 1, 'decelerate'),
       k(9.6, 0.9), k(9.8, 0, 'accelerate'),
     ]),
-    // the beam has to reach further and further down than the boxed flow's: the bottle
+    // the beam has to reach further and further down than the boxed flow's: the carton
     // hangs below the fist rather than sitting in it
     custom('kiosk', 'scanReach', [k(0, 0.34), k(8.6, 0.34), k(9.2, 0.30, 'decelerate'), k(18.5, 0.30)]),
     custom('kiosk', 'scanSpread', [k(0, 0.1), k(8.6, 0.1), k(9.2, 0.19, 'decelerate'), k(18.5, 0.19)]),
@@ -340,7 +340,7 @@ export const patientCollectBottle: SceneDef = {
       k(6.7, AT_FRONT, 'smooth'),
       k(18.5, AT_FRONT),
     ]),
-    // she fades out with the cabinet: what is left on screen is the bottle alone
+    // she fades out with the cabinet: what is left on screen is the carton alone
     track('patient', 'opacity', [
       k(1.4, 1), k(11.8, 1), k(12.5, 0, 'smooth'), k(15.1, 0), k(16.0, 1, 'smooth'), k(18.5, 1),
     ]),
@@ -356,14 +356,14 @@ export const patientCollectBottle: SceneDef = {
       k(5.3, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(18.5, 0.45),
     ]),
     // into the bay -> up to the scan window -> down while the sticker prints -> up to
-    // the slot -> resting on the bottle
+    // the slot -> resting on the carton
     track('patient', 'reach', [
       /*
         * The grab, phrased the way a hand actually moves: the arm leaves rest, covers most
-        * of the distance, then crawls the last few centimetres onto the bottle. It holds
+        * of the distance, then crawls the last few centimetres onto the carton. It holds
         * dead still from 4.15 to 5.05 — the beat where the fingers close before anything
         * lifts, and long enough for the rig to lock its screen-space aim before the
-        * bottle moves.
+        * carton moves.
         *
         * One span, not two: an `accelerate` arriving at full speed into a `decelerate`
         * leaving at full speed made the join at 3.9 a step in velocity, and the arm
@@ -374,8 +374,8 @@ export const patientCollectBottle: SceneDef = {
       k(5.4, 1, 'smooth'),
       k(5.9, 0.6, 'smooth'), k(6.6, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
       // she does not drop her arm to her side while the sticker prints: at this framing
-      // that put her hand and the bottle below the bottom edge and left her cut off in the
-      // corner of the frame. She holds the bottle where she can see it and waits.
+      // that put her hand and the carton below the bottom edge and left her cut off in the
+      // corner of the frame. She holds the carton where she can see it and waits.
       k(10.4, 0.42, 'smooth'), k(12.5, 0.42),
       k(12.7, 0.55, 'smooth'), k(18.5, 0.55),
     ]),
@@ -395,12 +395,12 @@ export const patientCollectBottle: SceneDef = {
     ]),
     custom('patient', 'reachTarget', [
       k(0, APPROACH_AIM),
-      // it comes down onto the bottle over the last stretch of the reach and is settled on
+      // it comes down onto the carton over the last stretch of the reach and is settled on
       // it before the handover, so the rig has the aim it was solved against by then
       k(4.0, APPROACH_AIM, 'smooth'),
       k(4.4, GRAB_AIM, 'smooth'),
       // she holds the aim through the contact beat, then lifts — the hand rises and takes
-      // the bottle with it, which is the whole point of handing it over on the shelf
+      // the carton with it, which is the whole point of handing it over on the shelf
       k(4.7, GRAB_AIM, 'standard'),
       k(5.0, OUT_AIM, 'smooth'),
       k(5.4, LIFT_AIM, 'smooth'),
@@ -411,7 +411,7 @@ export const patientCollectBottle: SceneDef = {
       k(18.5, READ),
     ]),
 
-    // ---- the bottle: one object, from the shelf to the demonstration ----
+    // ---- the carton: one object, from the shelf to the demonstration ----
     /*
      * Never swapped for a copy in her hand. `attachTo` is a timeline channel, so the same
      * actor changes what it is parented to: it stands on the shelf until her fingers close
@@ -424,7 +424,7 @@ export const patientCollectBottle: SceneDef = {
     custom('bottle', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [12.6, '']])),
     /*
      * Nothing she holds may cross the plane her hand is drawn on; the runtime enforces it.
-     * This is the let-go for the handover itself, where the bottle is still standing on the
+     * This is the let-go for the handover itself, where the carton is still standing on the
      * shelf inside her closing fingers and does cross it.
      */
     custom('bottle', 'clamp', [k(0, 0), k(4.6, 0, 'smooth'), k(5.1, 1, 'smooth'), k(18.5, 1)]),
@@ -461,22 +461,21 @@ export const patientCollectBottle: SceneDef = {
       k(12.6, [0, -0.14, 0]),
     ]),
 
-    // ---- demonstration: peel the sticker off its backing and press it on the bottle ----
+    // ---- demonstration: peel the sticker off its backing and press it on the carton ----
     track('demoLabel', 'visible', steps([[0, false], [12.7, true], [15.5, false]])),
     track('demoLabel', 'opacity', [k(12.7, 0), k(13.3, 1, 'smooth'), k(15.0, 1), k(15.5, 0, 'smooth')]),
     custom('demoLabel', 'curl', [k(13.1, 1), k(13.9, 0.7, 'smooth'), k(14.6, 0.04, 'smooth'), k(14.8, 0)]),
     track('demoLabel', 'position', [
       /*
-       * It lands on the orange glass above the printed label, not on the label itself.
-       * The sticker is white and the bottle already carries a white block through its
-       * middle, so pressed on there it disappeared into it: the beat played, and what was
-       * on screen was a bottle that did not change. It also comes in from twice as far
-       * off the glass, so the press is a move rather than a nudge.
+       * It lands flat on the front of the carton, between the printed indications and the
+       * code, and comes in from a long way off it so the press is a move rather than a
+       * nudge. Clear of the QR on purpose: the code is read before the sticker is applied,
+       * but a sticker sitting over it would still read as having covered it.
        */
-      k(12.7, [STAGE[0] + 0.01, STAGE[1] + 0.062, STAGE[2] + 0.115], 'smooth'),
-      k(13.9, [STAGE[0] + 0.004, STAGE[1] + 0.042, STAGE[2] + 0.07], 'smooth'),
-      k(14.6, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272], 'decelerate'),
-      k(14.8, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272]),
+      k(12.7, [STAGE[0] + 0.008, STAGE[1] + 0.012, STAGE[2] + 0.1], 'smooth'),
+      k(13.9, [STAGE[0] + 0.002, STAGE[1] + 0.001, STAGE[2] + 0.062], 'smooth'),
+      k(14.6, [STAGE[0] + 0.002, STAGE[1] - 0.006, STAGE[2] + 0.0222], 'decelerate'),
+      k(14.8, [STAGE[0] + 0.002, STAGE[1] - 0.006, STAGE[2] + 0.0222]),
     ]),
     track('demoLabel', 'rotation', [
       k(12.7, [0.28, -0.22, 0.12], 'smooth'),
@@ -485,8 +484,8 @@ export const patientCollectBottle: SceneDef = {
   ],
   markers: [
     { t: 1.6, label: 'pick-up bay' },
-    { t: 4.8, label: 'bottle taken' },
-    { t: 9.2, label: 'QR on the bottle scanned' },
+    { t: 4.8, label: 'carton taken' },
+    { t: 9.2, label: 'QR on the carton scanned' },
     { t: 11.4, label: 'sticker printed' },
     { t: 14.8, label: 'sticker applied' },
     { t: 16.9, label: 'order complete' },
@@ -502,7 +501,7 @@ export const patientCollectBottle: SceneDef = {
     { t0: 6.3, t1: 7.4, text: 'ยาที่ใส่กล่องไม่ได้ จะมีคิวอาร์โค้ดติดอยู่ที่ตัวยา', textEn: 'Medicine that will not fit a case carries its QR code on the item itself' },
     { t0: 7.8, t1: 9.6, text: 'กรุณาสแกนคิวอาร์โค้ดที่ช่องสแกนด้านขวา', textEn: 'Scan the QR code at the window on the right' },
     { t0: 10.0, t1: 11.9, text: 'ระบบกำลังพิมพ์สติกเกอร์ยาที่ช่องสติกเกอร์', textEn: 'The medicine sticker is being printed at the sticker slot' },
-    { t0: 13.1, t1: 15.0, text: 'กรุณาแปะสติกเกอร์ลงบนขวดยา', textEn: 'Please apply the sticker to the bottle' },
+    { t0: 13.1, t1: 15.0, text: 'กรุณาแปะสติกเกอร์ลงบนกล่องยา', textEn: 'Please apply the sticker to the carton' },
     { t0: 16.7, t1: 18.1, text: 'รับยาครบทุกรายการเรียบร้อย', textEn: 'All items in the order have been collected' },
   ],
   success: [{ t0: 16.9, t1: 18.1 }],

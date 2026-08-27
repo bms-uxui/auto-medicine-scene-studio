@@ -343,6 +343,122 @@ export function MedicineBottle(props: React.ComponentProps<'group'>) {
   )
 }
 
+/**
+ * Front artwork for the syrup carton: a pale blue card with a tall rounded panel printed
+ * on it, a black band naming what it is, and the indications under it.
+ *
+ * Deliberately unbranded. It is drawn after the shape of a real Thai cough-syrup carton,
+ * which is what the hospital dispenses for a liquid — but the film is a demonstration of a
+ * machine, not an advertisement for a product, so there is no maker's mark, no logo and no
+ * trade name on it.
+ */
+function syrupCartonTexture() {
+  const canvas = document.createElement('canvas')
+  const W = 480
+  const H = 1290
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  const TH = (weight: number, size: number) =>
+    `${weight} ${size}px "Noto Sans Thai", Inter, Helvetica, Arial, sans-serif`
+
+  ctx.fillStyle = '#cadde8'
+  ctx.fillRect(0, 0, W, H)
+
+  /** the rounded panel the printing sits on, inset from the card's edges */
+  const px = 44
+  const py = 60
+  const pw = W - px * 2
+  const ph = H - py * 2
+  const r = pw / 2
+  ctx.beginPath()
+  ctx.moveTo(px, py + r)
+  ctx.arcTo(px, py, px + r, py, r)
+  ctx.arcTo(px + pw, py, px + pw, py + r, r)
+  ctx.lineTo(px + pw, py + ph - r)
+  ctx.arcTo(px + pw, py + ph, px + pw - r, py + ph, r)
+  ctx.arcTo(px, py + ph, px, py + ph - r, r)
+  ctx.closePath()
+  ctx.fillStyle = '#eef1f2'
+  ctx.fill()
+  ctx.strokeStyle = '#c3ccd2'
+  ctx.lineWidth = 3
+  ctx.stroke()
+
+  // the panel is two tones: white above the band, a light grey below it
+  ctx.save()
+  ctx.clip()
+  ctx.fillStyle = '#fdfefe'
+  ctx.fillRect(px, py, pw, 430)
+  ctx.fillStyle = '#111417'
+  ctx.fillRect(px, 430, pw, 150)
+  ctx.fillStyle = '#dfe4e6'
+  ctx.fillRect(px, 580, pw, ph)
+  ctx.restore()
+
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#ffffff'
+  ctx.font = TH(700, 74)
+  ctx.fillText('ยาน้ำแก้ไอ', W / 2, 512)
+  ctx.font = TH(400, 38)
+  ctx.fillText('ชนิดน้ำเชื่อม', W / 2, 560)
+
+  ctx.fillStyle = '#3d464d'
+  ctx.font = TH(400, 40)
+  for (const [i, line] of ['บรรเทาอาการไอ', 'ช่วยขับเสมหะ', 'และทำให้ชุ่มคอ'].entries()) {
+    ctx.fillText(line, W / 2, 680 + i * 62)
+  }
+
+  ctx.fillStyle = '#7c868d'
+  ctx.font = TH(400, 34)
+  ctx.fillText('ขนาดบรรจุ 60 มล.', W / 2, H - 190)
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  return tex
+}
+
+/**
+ * The carton a bottle of syrup is dispensed in: tall, slim, and far too big for a plastic
+ * case — which is the whole reason the no-case flow exists.
+ *
+ * It carries the hospital's QR on its own front, low enough that the pharmacy sticker,
+ * which goes on above it, cannot cover the code.
+ */
+export function SyrupCarton(props: React.ComponentProps<'group'>) {
+  const face = useMemo(() => syrupCartonTexture(), [])
+  const code = qrTexture()
+  useEffect(() => () => face.dispose(), [face])
+  const W = 0.05
+  const H = 0.134
+  const D = 0.04
+  const QR = W * 0.5
+  return (
+    <group {...props}>
+      <RoundedBox args={[W, H, D]} radius={0.002} smoothness={3} castShadow receiveShadow>
+        <meshStandardMaterial color="#cadde8" roughness={0.66} metalness={0} />
+      </RoundedBox>
+      {/* the printed front and back, a hair proud of the card so they never z-fight */}
+      {([1, -1] as const).map((side) => (
+        <mesh key={side} position={[0, 0, (side * D) / 2 + side * 0.0006]} rotation={[0, side === 1 ? 0 : Math.PI, 0]}>
+          <planeGeometry args={[W, H]} />
+          <meshStandardMaterial map={face} roughness={0.62} metalness={0} />
+        </mesh>
+      ))}
+      {/* the hospital's code, low on the front and clear of where the sticker lands */}
+      <mesh position={[0, -H * 0.3, D / 2 + 0.0014]}>
+        <planeGeometry args={[QR + 0.005, QR + 0.005]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.85} metalness={0} />
+      </mesh>
+      <mesh position={[0, -H * 0.3, D / 2 + 0.0018]}>
+        <planeGeometry args={[QR, QR]} />
+        <meshStandardMaterial map={code} roughness={0.75} metalness={0} />
+      </mesh>
+    </group>
+  )
+}
+
 /** Medicine box the machine dispenses. */
 export function MedicineBox(props: React.ComponentProps<'group'>) {
   const label = useMemo(() => labelTexture(['Lorem 100 mg', 'Take 1 tablet after meals', 'Qty 30'], BRAND.blue), [])
@@ -767,6 +883,7 @@ export const PROP_COMPONENTS = {
   sideTable: SideTable,
   medicinePackage: MedicinePackage,
   medicineBottle: MedicineBottle,
+  syrupCarton: SyrupCarton,
   medicineBoxArt: MedicineBoxArt,
   medicineBox: MedicineBox,
   sticker: Sticker,
