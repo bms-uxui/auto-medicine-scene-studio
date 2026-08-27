@@ -21,9 +21,9 @@ import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE } from './collectC
  *   4.2- 5.0  the bottle lifts off the shelf and crossfades into her hand
  *   5.0- 7.4  pull back and walk her across to the scan window
  *   7.4- 9.8  she raises the bottle; the QR on it is read; verified at 9.2
- *   9.8-13.2  the sticker prints at the middle slot and is taken
- *  13.2-16.8  dissolve to the bottle; the sticker is pressed onto it
- *  16.8-19.4  back at the cabinet; the screen confirms the whole order is done
+ *   9.8-12.3  the sticker prints at the middle slot; she watches it feed
+ *  12.3-15.1  dissolve to the bottle; the sticker is pressed onto it
+ *  15.1-18.5  back at the cabinet; the screen confirms the whole order is done
  */
 /** where she stands at the front of the cabinet, facing the scan window and the slot */
 const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
@@ -237,7 +237,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
 export const patientCollectBottle: SceneDef = {
   id: 'patient-collect-bottle',
   name: 'Patient · Collecting Medicine (no case)',
-  duration: 19.4,
+  duration: 18.5,
   fps: 30,
   size: [1080, 683],
   background: '#ffffff',
@@ -271,15 +271,15 @@ export const patientCollectBottle: SceneDef = {
       // demonstration's subject, and reaching for it only to have it dissolve out of her
       // hand a second later was a move that led nowhere. The shot creeps in on the slot
       // while it prints and then dissolves straight to the demonstration.
-      k(13.4, shot(SLOT_VIEW, 1.72, 34, 10), 'smooth'),
+      k(12.5, shot(SLOT_VIEW, 1.72, 34, 10), 'smooth'),
       // 3 · Applying Sticker — the sticker carries the shot from the slot to the staging
-      k(14.2, shot(STAGE, 0.64, 0, 0), 'smooth'),
+      k(13.3, shot(STAGE, 0.64, 0, 0), 'smooth'),
       // the demonstration is over when the sticker is down; it used to sit on a finished
       // frame for the best part of a second before anything moved again
-      k(16.0, shot(STAGE, 0.58, 0, 0), 'smooth'),
+      k(15.1, shot(STAGE, 0.58, 0, 0), 'smooth'),
       // the cabinet dissolves back in as the camera pulls out onto the screen
-      k(17.1, shot(SCREEN_VIEW, 1.15, 16, 5), 'smooth'),
-      k(19.4, shot(SCREEN_VIEW, 0.95, 10, 3)),
+      k(16.2, shot(SCREEN_VIEW, 1.15, 16, 5), 'smooth'),
+      k(18.5, shot(SCREEN_VIEW, 0.95, 10, 3)),
     ]),
     track('target', 'position', [
       k(0, FULL),
@@ -290,18 +290,18 @@ export const patientCollectBottle: SceneDef = {
       k(8.0, SCAN, 'smooth'),
       k(9.8, SCAN),
       k(10.8, SLOT_VIEW, 'smooth'),
-      k(13.4, SLOT_VIEW),
-      k(14.2, STAGE, 'smooth'),
-      k(16.0, STAGE),
-      k(17.1, SCREEN_VIEW, 'smooth'),
-      k(19.4, SCREEN_VIEW),
+      k(12.5, SLOT_VIEW),
+      k(13.3, STAGE, 'smooth'),
+      k(15.1, STAGE),
+      k(16.2, SCREEN_VIEW, 'smooth'),
+      k(18.5, SCREEN_VIEW),
     ]),
     custom('camera', 'fov', [
       // held through the push: a focal length changing under a dolly is a second move on
       // top of the first, and they do not cancel
       k(0, 23), k(4.3, 23), k(6.2, 23, 'smooth'), k(7.2, 24, 'smooth'), k(7.5, 24),
-      k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(13.4, 23, 'smooth'),
-      k(14.2, 24, 'smooth'), k(16.0, 24), k(17.1, 22, 'smooth'), k(19.4, 22),
+      k(8.0, 22, 'smooth'), k(9.8, 22), k(10.8, 22, 'smooth'), k(12.5, 23, 'smooth'),
+      k(13.3, 24, 'smooth'), k(15.1, 24), k(16.2, 22, 'smooth'), k(18.5, 22),
     ]),
 
     // ---- kiosk ----
@@ -317,15 +317,15 @@ export const patientCollectBottle: SceneDef = {
     ]),
     // the beam has to reach further and further down than the boxed flow's: the bottle
     // hangs below the fist rather than sitting in it
-    custom('kiosk', 'scanReach', [k(0, 0.34), k(8.6, 0.34), k(9.2, 0.30, 'decelerate'), k(19.4, 0.30)]),
-    custom('kiosk', 'scanSpread', [k(0, 0.1), k(8.6, 0.1), k(9.2, 0.19, 'decelerate'), k(19.4, 0.19)]),
-    custom('kiosk', 'scanTilt', [k(0, 0.16), k(8.6, 0.16), k(9.2, -0.26, 'smooth'), k(19.4, -0.26)]),
+    custom('kiosk', 'scanReach', [k(0, 0.34), k(8.6, 0.34), k(9.2, 0.30, 'decelerate'), k(18.5, 0.30)]),
+    custom('kiosk', 'scanSpread', [k(0, 0.1), k(8.6, 0.1), k(9.2, 0.19, 'decelerate'), k(18.5, 0.19)]),
+    custom('kiosk', 'scanTilt', [k(0, 0.16), k(8.6, 0.16), k(9.2, -0.26, 'smooth'), k(18.5, -0.26)]),
     // it stays hanging out of the slot and goes with the cabinet, rather than being
     // drawn back in behind a hand that is no longer reaching for it
-    custom('kiosk', 'stickerFeed', [k(9.8, 0), k(11.4, 1, 'decelerate'), k(13.4, 1)]),
+    custom('kiosk', 'stickerFeed', [k(9.8, 0), k(11.4, 1, 'decelerate'), k(12.5, 1)]),
     // the cabinet dissolves away for the applying demonstration and comes back after it
     track('kiosk', 'opacity', [
-      k(0, 1), k(12.7, 1), k(13.4, 0, 'smooth'), k(16.0, 0), k(16.9, 1, 'smooth'), k(19.4, 1),
+      k(0, 1), k(11.8, 1), k(12.5, 0, 'smooth'), k(15.1, 0), k(16.0, 1, 'smooth'), k(18.5, 1),
     ]),
 
     // ---- patient ----
@@ -338,11 +338,11 @@ export const patientCollectBottle: SceneDef = {
       k(3.0, AT_BAY, 'smooth'),
       k(5.5, AT_BAY),
       k(6.7, AT_FRONT, 'smooth'),
-      k(19.4, AT_FRONT),
+      k(18.5, AT_FRONT),
     ]),
     // she fades out with the cabinet: what is left on screen is the bottle alone
     track('patient', 'opacity', [
-      k(1.4, 1), k(12.7, 1), k(13.4, 0, 'smooth'), k(16.0, 0), k(16.9, 1, 'smooth'), k(19.4, 1),
+      k(1.4, 1), k(11.8, 1), k(12.5, 0, 'smooth'), k(15.1, 0), k(16.0, 1, 'smooth'), k(18.5, 1),
     ]),
     custom('patient', 'tilt', [
       /*
@@ -353,7 +353,7 @@ export const patientCollectBottle: SceneDef = {
        * once the camera has pulled out again.
        */
       k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
-      k(5.3, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(19.4, 0.45),
+      k(5.3, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(18.5, 0.45),
     ]),
     // into the bay -> up to the scan window -> down while the sticker prints -> up to
     // the slot -> resting on the bottle
@@ -376,8 +376,8 @@ export const patientCollectBottle: SceneDef = {
       // she does not drop her arm to her side while the sticker prints: at this framing
       // that put her hand and the bottle below the bottom edge and left her cut off in the
       // corner of the frame. She holds the bottle where she can see it and waits.
-      k(10.4, 0.42, 'smooth'), k(13.4, 0.42),
-      k(13.6, 0.55, 'smooth'), k(19.4, 0.55),
+      k(10.4, 0.42, 'smooth'), k(12.5, 0.42),
+      k(12.7, 0.55, 'smooth'), k(18.5, 0.55),
     ]),
     custom('patient', 'bend', [
       /*
@@ -391,7 +391,7 @@ export const patientCollectBottle: SceneDef = {
       k(3.0, 0, 'smooth'),
       k(3.95, 0.88, 'smooth'),
       k(5.4, 0.88, 'smooth'),
-      k(6.2, 0, 'smooth'), k(19.4, 0),
+      k(6.2, 0, 'smooth'), k(18.5, 0),
     ]),
     custom('patient', 'reachTarget', [
       k(0, APPROACH_AIM),
@@ -406,9 +406,9 @@ export const patientCollectBottle: SceneDef = {
       k(5.4, LIFT_AIM, 'smooth'),
       k(5.9, LIFT_AIM),
       k(7.2, READ_HIGH, 'smooth'),
-      k(13.4, READ_HIGH),
-      k(13.6, READ, 'smooth'),
-      k(19.4, READ),
+      k(12.5, READ_HIGH),
+      k(12.7, READ, 'smooth'),
+      k(18.5, READ),
     ]),
 
     // ---- the bottle: one object, from the shelf to the demonstration ----
@@ -421,16 +421,16 @@ export const patientCollectBottle: SceneDef = {
      * while it is loose, an offset in the hand's frame while it is held — so the key that
      * ends one span and the key that opens the next sit a tenth of a millisecond apart.
      */
-    custom('bottle', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [13.5, '']])),
+    custom('bottle', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [12.6, '']])),
     /*
      * Nothing she holds may cross the plane her hand is drawn on; the runtime enforces it.
      * This is the let-go for the handover itself, where the bottle is still standing on the
      * shelf inside her closing fingers and does cross it.
      */
-    custom('bottle', 'clamp', [k(0, 0), k(4.6, 0, 'smooth'), k(5.1, 1, 'smooth'), k(19.4, 1)]),
+    custom('bottle', 'clamp', [k(0, 0), k(4.6, 0, 'smooth'), k(5.1, 1, 'smooth'), k(18.5, 1)]),
     track('bottle', 'opacity', [
-      k(0, 1), k(12.7, 1), k(13.4, 0, 'smooth'),
-      k(13.8, 0), k(14.4, 1, 'smooth'), k(19.4, 1),
+      k(0, 1), k(11.8, 1), k(12.5, 0, 'smooth'),
+      k(12.9, 0), k(13.5, 1, 'smooth'), k(18.5, 1),
     ]),
     track('bottle', 'position', [
       k(0, ON_SHELF),
@@ -439,10 +439,10 @@ export const patientCollectBottle: SceneDef = {
       k(4.6, CONTACT),
       k(4.7, CONTACT, 'smooth'),
       k(5.4, CARRY, 'smooth'),
-      k(13.4999, CARRY, 'linear'),
+      k(12.5999, CARRY, 'linear'),
       // ---- loose again: world coordinates, staged for the applying demonstration ----
-      k(13.5, STAGE),
-      k(19.4, STAGE),
+      k(12.6, STAGE),
+      k(18.5, STAGE),
     ]),
     track('bottle', 'rotation', [
       k(0, [0, 0.2, 0]),
@@ -457,14 +457,14 @@ export const patientCollectBottle: SceneDef = {
       k(7.5, [0.05, -0.2, 0.65]),
       // the QR is wrapped on the front of the glass, so the front is turned to the reader
       k(8.6, [0.05, -0.05, 0.06], 'smooth'),
-      k(13.4999, [0.05, -0.05, 0.06], 'linear'),
-      k(13.5, [0, -0.14, 0]),
+      k(12.5999, [0.05, -0.05, 0.06], 'linear'),
+      k(12.6, [0, -0.14, 0]),
     ]),
 
     // ---- demonstration: peel the sticker off its backing and press it on the bottle ----
-    track('demoLabel', 'visible', steps([[0, false], [13.6, true], [16.4, false]])),
-    track('demoLabel', 'opacity', [k(13.6, 0), k(14.2, 1, 'smooth'), k(15.9, 1), k(16.4, 0, 'smooth')]),
-    custom('demoLabel', 'curl', [k(14.0, 1), k(14.8, 0.7, 'smooth'), k(15.5, 0.04, 'smooth'), k(15.7, 0)]),
+    track('demoLabel', 'visible', steps([[0, false], [12.7, true], [15.5, false]])),
+    track('demoLabel', 'opacity', [k(12.7, 0), k(13.3, 1, 'smooth'), k(15.0, 1), k(15.5, 0, 'smooth')]),
+    custom('demoLabel', 'curl', [k(13.1, 1), k(13.9, 0.7, 'smooth'), k(14.6, 0.04, 'smooth'), k(14.8, 0)]),
     track('demoLabel', 'position', [
       /*
        * It lands on the orange glass above the printed label, not on the label itself.
@@ -473,14 +473,14 @@ export const patientCollectBottle: SceneDef = {
        * on screen was a bottle that did not change. It also comes in from twice as far
        * off the glass, so the press is a move rather than a nudge.
        */
-      k(13.6, [STAGE[0] + 0.01, STAGE[1] + 0.062, STAGE[2] + 0.115], 'smooth'),
-      k(14.8, [STAGE[0] + 0.004, STAGE[1] + 0.042, STAGE[2] + 0.07], 'smooth'),
-      k(15.5, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272], 'decelerate'),
-      k(15.7, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272]),
+      k(12.7, [STAGE[0] + 0.01, STAGE[1] + 0.062, STAGE[2] + 0.115], 'smooth'),
+      k(13.9, [STAGE[0] + 0.004, STAGE[1] + 0.042, STAGE[2] + 0.07], 'smooth'),
+      k(14.6, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272], 'decelerate'),
+      k(14.8, [STAGE[0] + 0.004, STAGE[1] + 0.034, STAGE[2] + 0.0272]),
     ]),
     track('demoLabel', 'rotation', [
-      k(13.6, [0.28, -0.22, 0.12], 'smooth'),
-      k(15.5, [0, -0.14, 0], 'smooth'),
+      k(12.7, [0.28, -0.22, 0.12], 'smooth'),
+      k(14.6, [0, -0.14, 0], 'smooth'),
     ]),
   ],
   markers: [
@@ -488,22 +488,22 @@ export const patientCollectBottle: SceneDef = {
     { t: 4.8, label: 'bottle taken' },
     { t: 9.2, label: 'QR on the bottle scanned' },
     { t: 11.4, label: 'sticker printed' },
-    { t: 15.7, label: 'sticker applied' },
-    { t: 17.8, label: 'order complete' },
+    { t: 14.8, label: 'sticker applied' },
+    { t: 16.9, label: 'order complete' },
   ],
   steps: [
     { id: 'collect', label: 'รับยา', labelEn: 'Collecting\nMedicine', icon: 'box', t0: 0, t1: 9.8 },
-    { id: 'sticker', label: 'รับสติ๊กเกอร์', labelEn: 'Collecting\nSticker', icon: 'sticker', t0: 9.8, t1: 13.2 },
-    { id: 'apply', label: 'แปะสติ๊กเกอร์', labelEn: 'Applying\nSticker', icon: 'apply', t0: 13.2, t1: 19.4 },
+    { id: 'sticker', label: 'รับสติ๊กเกอร์', labelEn: 'Collecting\nSticker', icon: 'sticker', t0: 9.8, t1: 12.3 },
+    { id: 'apply', label: 'แปะสติ๊กเกอร์', labelEn: 'Applying\nSticker', icon: 'apply', t0: 12.3, t1: 18.5 },
   ],
   captions: [
     { t0: 1.6, t1: 2.6, text: 'ช่องรับยาอยู่บริเวณนี้', textEn: 'The pick-up slot is located here' },
     { t0: 2.8, t1: 4.9, text: 'กรุณาหยิบยาออกจากช่องรับยา', textEn: 'Please take the medicine from the pick-up slot' },
     { t0: 6.3, t1: 7.4, text: 'ยาที่ใส่กล่องไม่ได้ จะมีคิวอาร์โค้ดติดอยู่ที่ตัวยา', textEn: 'Medicine that will not fit a case carries its QR code on the item itself' },
     { t0: 7.8, t1: 9.6, text: 'กรุณาสแกนคิวอาร์โค้ดที่ช่องสแกนด้านขวา', textEn: 'Scan the QR code at the window on the right' },
-    { t0: 10.0, t1: 12.8, text: 'ระบบกำลังพิมพ์สติกเกอร์ยาที่ช่องสติกเกอร์', textEn: 'The medicine sticker is being printed at the sticker slot' },
-    { t0: 14.0, t1: 15.9, text: 'กรุณาแปะสติกเกอร์ลงบนขวดยา', textEn: 'Please apply the sticker to the bottle' },
-    { t0: 17.6, t1: 19.0, text: 'รับยาครบทุกรายการเรียบร้อย', textEn: 'All items in the order have been collected' },
+    { t0: 10.0, t1: 11.9, text: 'ระบบกำลังพิมพ์สติกเกอร์ยาที่ช่องสติกเกอร์', textEn: 'The medicine sticker is being printed at the sticker slot' },
+    { t0: 13.1, t1: 15.0, text: 'กรุณาแปะสติกเกอร์ลงบนขวดยา', textEn: 'Please apply the sticker to the bottle' },
+    { t0: 16.7, t1: 18.1, text: 'รับยาครบทุกรายการเรียบร้อย', textEn: 'All items in the order have been collected' },
   ],
-  success: [{ t0: 17.8, t1: 19.0 }],
+  success: [{ t0: 16.9, t1: 18.1 }],
 }
