@@ -289,17 +289,22 @@ export const patientCollectOpd: SceneDef = {
     // prints -> up to the slot -> resting on the medicine
     track('patient', 'reach', [
       /*
-       * The grab, phrased the way a hand actually moves: the arm leaves rest quickly,
-       * covers most of the distance, then crawls the last few centimetres onto the case —
-       * a single eased ramp read as one machine sweep.
+       * The grab, phrased the way a hand actually moves: the arm leaves rest, covers most
+       * of the distance, then crawls the last few centimetres onto the case.
+       *
+       * One span, not two. It used to accelerate to 0.87 and then decelerate the rest of
+       * the way, and both of those easings are one-sided — `accelerate` arrives at full
+       * speed and `decelerate` leaves at full speed — so the join at 3.9 was a step in
+       * velocity, not a shape: the arm was still speeding up when it hit the seam and
+       * lurched through it. `standard` is the whole reach in one curve, at rest at both
+       * ends and quickest early, which is the same phrasing without the seam.
        *
        * It then holds dead still from 4.15 to 5.05. That hold is doing two jobs: it is
        * the beat where the fingers close before anything is lifted, and it is what lets
        * the rig lock its aim (half a second after the reach stops changing) before the
        * case moves, so the case comes up out of a hand that is not still drifting.
        */
-      k(1.4, 0), k(3.0, 0, 'accelerate'),
-      k(3.9, 0.87, 'decelerate'),
+      k(1.4, 0), k(3.0, 0, 'standard'),
       k(4.15, 1, 'smooth'),
       k(5.4, 1, 'smooth'),
       k(5.9, 0.6, 'smooth'), k(6.6, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
@@ -315,10 +320,13 @@ export const patientCollectOpd: SceneDef = {
        * The lean leads the arm — she folds toward the shelf first and is settled at the
        * angle the grab is tuned around before the hand arrives — and holds there until
        * the case is out. Straightening leads the arm back up on the way out.
+       *
+       * It leaves rest on a `smooth`, not a `decelerate`: `decelerate` starts at full
+       * speed, so the torso used to take a third of the lean in the first two frames and
+       * then settle, which is the jolt the arm was riding on top of.
        */
-      k(3.0, 0, 'decelerate'),
-      k(3.7, 0.63, 'smooth'),
-      k(4.15, 0.88, 'smooth'),
+      k(3.0, 0, 'smooth'),
+      k(3.95, 0.88, 'smooth'),
       k(5.4, 0.88, 'smooth'),
       k(6.2, 0, 'smooth'), k(26.4, 0),
     ]),

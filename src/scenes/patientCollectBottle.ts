@@ -295,14 +295,17 @@ export const patientCollectBottle: SceneDef = {
     // the slot -> resting on the bottle
     track('patient', 'reach', [
       /*
-        * The grab, phrased the way a hand actually moves: the arm leaves rest quickly,
-        * covers most of the distance, then crawls the last few centimetres onto the
-        * bottle. It holds dead still from 4.15 to 5.05 — the beat where the fingers close
-        * before anything lifts, and long enough for the rig to lock its screen-space aim
-        * before the bottle moves.
+        * The grab, phrased the way a hand actually moves: the arm leaves rest, covers most
+        * of the distance, then crawls the last few centimetres onto the bottle. It holds
+        * dead still from 4.15 to 5.05 — the beat where the fingers close before anything
+        * lifts, and long enough for the rig to lock its screen-space aim before the
+        * bottle moves.
+        *
+        * One span, not two: an `accelerate` arriving at full speed into a `decelerate`
+        * leaving at full speed made the join at 3.9 a step in velocity, and the arm
+        * lurched through it.
         */
-      k(1.4, 0), k(3.0, 0, 'accelerate'),
-      k(3.9, 0.87, 'decelerate'),
+      k(1.4, 0), k(3.0, 0, 'standard'),
       k(4.15, 1, 'smooth'),
       k(5.4, 1, 'smooth'),
       k(5.9, 0.6, 'smooth'), k(6.6, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
@@ -314,10 +317,12 @@ export const patientCollectBottle: SceneDef = {
        * A light lean, not a fold: the shelf is at waist height, and a full bend swings the
        * whole arm down with the torso, well under it. The lean leads the arm on the way in
        * and leads it back up on the way out.
+       *
+       * It leaves rest on a `smooth`, not a `decelerate`: `decelerate` starts at full
+       * speed, so the torso took a third of the lean in the first two frames.
        */
-      k(3.0, 0, 'decelerate'),
-      k(3.7, 0.63, 'smooth'),
-      k(4.15, 0.88, 'smooth'),
+      k(3.0, 0, 'smooth'),
+      k(3.95, 0.88, 'smooth'),
       k(5.4, 0.88, 'smooth'),
       k(6.2, 0, 'smooth'), k(19.4, 0),
     ]),

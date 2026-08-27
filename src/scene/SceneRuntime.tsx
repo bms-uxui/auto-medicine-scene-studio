@@ -297,6 +297,7 @@ function PropActor({ actor }: { actor: ActorDef }) {
 function CameraRig({ scene }: { scene: SceneDef }) {
   const frame = useSampledFrame()
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
+  const root = useThree((s) => s.scene)
   const target = useRef(new THREE.Vector3(...scene.camera.target))
 
   // The Figma frame puts the 3D card right of centre; shift the projection so the
@@ -328,6 +329,9 @@ function CameraRig({ scene }: { scene: SceneDef }) {
     if (import.meta.env.DEV) {
       // dev probe: lets the screenshot harness see what the camera is actually doing
       ;(window as unknown as { __camObj?: unknown }).__camObj = camera
+      // the camera is not parented into the scene, so the harness needs the root itself
+      // to read a pose off the rig
+      ;(window as unknown as { __scene?: unknown }).__scene = root
       ;(window as unknown as { __cam?: unknown }).__cam = {
         fov: camera.fov,
         aspect: +camera.aspect.toFixed(4),
