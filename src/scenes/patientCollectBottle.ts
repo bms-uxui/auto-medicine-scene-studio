@@ -391,6 +391,12 @@ export const patientCollectBottle: SceneDef = {
      * ends one span and the key that opens the next sit a tenth of a millisecond apart.
      */
     custom('bottle', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [13.5, '']])),
+    /*
+     * Nothing she holds may cross the plane her hand is drawn on; the runtime enforces it.
+     * This is the let-go for the handover itself, where the bottle is still standing on the
+     * shelf inside her closing fingers and does cross it.
+     */
+    custom('bottle', 'clamp', [k(0, 0), k(4.6, 0, 'smooth'), k(5.1, 1, 'smooth'), k(19.4, 1)]),
     track('bottle', 'opacity', [
       k(0, 1), k(12.7, 1), k(13.4, 0, 'smooth'),
       k(13.8, 0), k(14.4, 1, 'smooth'), k(19.4, 1),

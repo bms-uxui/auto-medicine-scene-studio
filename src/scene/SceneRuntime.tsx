@@ -248,6 +248,76 @@ function StaffActor({ actor }: { actor: ActorDef }) {
   )
 }
 
+/**
+ * How close a held prop may come to the plane its holder is drawn on, in metres.
+ * Small: this is a backstop against the prop crossing the plane, not a way of pushing it
+ * out of the hand.
+ */
+const HAND_CLEARANCE = 0.004
+
+/**
+ * Keeps a held prop behind the hand that holds it.
+ *
+ * The characters are cut-out art: the fist is painted on a flat plane through the grip,
+ * so a prop hung off that grip is only "in the hand" while every part of it stays behind
+ * that plane. It is a box, though, and it turns — the depth it takes up along the plane's
+ * normal changes with every degree it rolls, from a couple of centimetres lying flat to
+ * nearly ten on edge — so an offset that clears the hand in one pose has a corner through
+ * the fingers in the next.
+ *
+ * This measures the prop's own geometry in the grip's frame each frame and, if its
+ * nearest face has come through, slides it back along the grip's normal by exactly the
+ * overlap. It only ever pushes away from the camera side of the plane: a prop already
+ * clear is left exactly where the timeline put it, so the authored offsets are untouched.
+ *
+ * `custom:clamp` weights it, for the one moment it has to be let go of: at the instant the
+ * case changes hands it is still standing on the shelf with her fingers around it, so it
+ * genuinely crosses the plane there, and snapping it clear on that frame is the handover
+ * jump the whole beat is built to avoid. The scenes ramp it in as the fingers close.
+ */
+function clampBehindHost(
+  node: THREE.Object3D,
+  host: THREE.Object3D,
+  weight: number,
+  world: THREE.Vector3,
+  quat: THREE.Quaternion,
+  frame3: THREE.Matrix4,
+  inv3: THREE.Matrix4,
+  corner: THREE.Vector3,
+) {
+  node.updateMatrixWorld(true)
+  // the grip's frame without its scale: the rig is scaled to the character's height, and
+  // a scaled inverse would measure the overlap in the wrong units
+  host.getWorldPosition(world)
+  host.getWorldQuaternion(quat)
+  frame3.compose(world, quat, ONE)
+  inv3.copy(frame3).invert()
+
+  let front = -Infinity
+  node.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh || !mesh.visible) return
+    const geo = mesh.geometry
+    if (!geo.boundingBox) geo.computeBoundingBox()
+    const bb = geo.boundingBox
+    if (!bb) return
+    for (let i = 0; i < 8; i++) {
+      corner.set(i & 1 ? bb.max.x : bb.min.x, i & 2 ? bb.max.y : bb.min.y, i & 4 ? bb.max.z : bb.min.z)
+      corner.applyMatrix4(mesh.matrixWorld).applyMatrix4(inv3)
+      if (corner.z > front) front = corner.z
+    }
+  })
+  if (front === -Infinity) return
+
+  const over = front + HAND_CLEARANCE
+  if (over <= 0) return
+  // straight back along the grip's normal, in world space
+  corner.set(0, 0, -over * weight).applyQuaternion(quat)
+  node.position.add(corner)
+}
+
+const ONE = new THREE.Vector3(1, 1, 1)
+
 function PropActor({ actor }: { actor: ActorDef }) {
   const ref = useRegister(actor.id)
   // peel, lid and emptiness are read per frame: nothing re-renders during playback, so a
@@ -259,6 +329,9 @@ function PropActor({ actor }: { actor: ActorDef }) {
   const world = useMemo(() => new THREE.Vector3(), [])
   const local = useMemo(() => new THREE.Vector3(), [])
   const quat = useMemo(() => new THREE.Quaternion(), [])
+  const frame3 = useMemo(() => new THREE.Matrix4(), [])
+  const inv3 = useMemo(() => new THREE.Matrix4(), [])
+  const corner = useMemo(() => new THREE.Vector3(), [])
   useFrame(() => {
     const values = frame.current[actor.id]
     applyCommon(ref.current, actor, values)
@@ -284,6 +357,14 @@ function PropActor({ actor }: { actor: ActorDef }) {
       ref.current.rotateX(rot[0])
       ref.current.rotateY(rot[1])
       ref.current.rotateZ(rot[2])
+      /*
+       * Props meant to sit in front of the hand — the printed label she holds up — are
+       * authored with a positive offset, and are left alone.
+       */
+      const clamp = (values?.['custom:clamp'] as number) ?? 1
+      if (offset[2] < 0 && clamp > 0) {
+        clampBehindHost(ref.current, host, clamp, world, quat, frame3, inv3, corner)
+      }
     }
   })
   // the sticker reads its peel from the timeline; other primitives ignore it

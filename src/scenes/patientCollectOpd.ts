@@ -91,7 +91,15 @@ const HOLD: [number, number, number] = [0.085, -0.02, -0.112]
  */
 const LIFT_HOLD: [number, number, number] = [0.085, -0.02, -0.055]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
-const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
+const SCAN_TURN: [number, number, number] = [-1.4387, 0.0632, -1.7614]
+/**
+ * And how it is carried on the way there. Both of these are solved, not dialled in: the
+ * QR is on the lid, so the lid's normal has to point at the scanner window on the panel,
+ * and the offset that achieves that lives in the hand's frame — which turns with her arm
+ * all the way across the cabinet. A single angle held through the carry therefore drifts,
+ * and what it drifted into was the lid facing the camera instead of the machine.
+ */
+const CARRY_TURN: [number, number, number] = [-1.6233, -0.8269, -2.0686]
 
 /**
  * What her hand is aimed at during the grab. The rig swings the arm about the shoulder
@@ -242,8 +250,11 @@ export const patientCollectOpd: SceneDef = {
       // cabinet and the figure were still up, and the camera flew straight through both.
       k(10.5, shot(SCAN, 2.0, 40, 9), 'smooth'),
       k(11.3, shot(DEMO, 0.62, 45, 32), 'smooth'),                // isometric for the demo
-      k(14.6, shot(DEMO, 0.62, 45, 32), 'smooth'),
-      k(15.4, shot(BASKET_VIEW, 1.75, 45, 32), 'smooth'),         // the return reads iso too
+      // The return starts as the medicine leaves, not a second and a half later. The
+      // demonstration used to sit on a finished frame — carton gone, case open and still —
+      // for the best part of two seconds before anything moved again.
+      k(13.9, shot(DEMO, 0.62, 45, 32), 'smooth'),
+      k(15.0, shot(BASKET_VIEW, 1.75, 45, 32), 'smooth'),         // the return reads iso too
       k(16.0, shot(BASKET_VIEW, 1.7, 45, 32), 'smooth'),
       k(17.0, shot(SLOT, 1.4, 34, 10), 'smooth'),                 // 2 · Collecting Sticker
       k(18.8, shot(TAKE, 1.5, 38, 10), 'smooth'),
@@ -266,8 +277,8 @@ export const patientCollectOpd: SceneDef = {
       k(11.3, DEMO, 'smooth'),
       // the target flies WITH the case — same keys, same easing as its position track,
       // so the case stays pinned to frame centre for the whole carry
-      k(14.6, DEMO),
-      k(15.4, [IN_BASKET[0], IN_BASKET[1] + 0.2, IN_BASKET[2]], 'smooth'),
+      k(13.9, DEMO),
+      k(15.0, [IN_BASKET[0], IN_BASKET[1] + 0.2, IN_BASKET[2]], 'smooth'),
       k(16.0, [BASKET[0] + 0.03, BASKET[1] + 0.1, BASKET[2]], 'smooth'),
       k(17.0, SLOT, 'smooth'),
       k(18.8, TAKE, 'smooth'),
@@ -508,13 +519,26 @@ export const patientCollectOpd: SceneDef = {
      * From the demonstration on it is the `demoBox` actor instead, because there it has
      * to leave the case rather than stay in it.
      */
-    custom('case', 'empty', steps([[0, 0], [11.2, 1]])),
+    custom('case', 'empty', steps([[0, 0], [10.6, 1]])),
     custom('case', 'open', [k(12.3, 0), k(13.2, 1, 'smooth'), k(26.4, 1)]),
     track('case', 'opacity', [
       // it dissolves out with her for the demonstration, and is back for it
-      k(0, 1), k(9.9, 1), k(10.5, 0, 'smooth'),
-      k(11.2, 0), k(11.8, 1, 'smooth'), k(26.4, 1),
+      // A crossfade, not a cut to black. The case has to be switched off for a moment
+      // because it jumps from her hand to the demonstration stand at 10.6 — but it used to
+      // stay off for most of a second after the cabinet and she had already gone, and with
+      // nothing else on stage that reads as a blank frame rather than a dissolve. It comes
+      // straight back on the far side of the jump and is up to full while the camera is
+      // still swinging round to it.
+      k(0, 1), k(9.9, 1), k(10.55, 0, 'smooth'),
+      k(10.6, 0, 'linear'), k(11.15, 1, 'smooth'), k(26.4, 1),
     ]),
+    /*
+     * The hand is drawn on a flat plane, so nothing it holds may cross that plane. The
+     * runtime keeps the case behind it; this is only the let-go for the handover itself,
+     * where the case is still standing on the shelf inside her closing fingers and does
+     * cross it. It comes fully under the rule as the fingers close.
+     */
+    custom('case', 'clamp', [k(0, 0), k(4.1, 0, 'smooth'), k(4.6, 1, 'smooth'), k(26.4, 1)]),
     track('case', 'position', [
       k(0, BOX_ON_SHELF),
       k(4.0999, BOX_ON_SHELF, 'linear'),
@@ -540,10 +564,10 @@ export const patientCollectOpd: SceneDef = {
       k(10.5999, CARRY, 'linear'),
       // ---- loose again: world coordinates ----
       k(10.6, DEMO),
-      k(14.6, DEMO),
+      k(13.9, DEMO),
       // carried to a spot directly over the basket, then lowered straight down into it
-      k(15.2, [IN_BASKET[0], IN_BASKET[1] + 0.24, IN_BASKET[2]], 'smooth'),
-      k(15.8, IN_BASKET, 'decelerate'),
+      k(14.8, [IN_BASKET[0], IN_BASKET[1] + 0.24, IN_BASKET[2]], 'smooth'),
+      k(15.6, IN_BASKET, 'decelerate'),
       k(26.4, IN_BASKET),
     ]),
     track('case', 'rotation', [
@@ -566,9 +590,7 @@ export const patientCollectOpd: SceneDef = {
        * hand finds the reading face while the arm is still travelling — and it leaves the
        * approach to the window with nothing to do but arrive.
        */
-      k(5.98, SCAN_TURN, 'smooth'),
-      k(7.2, SCAN_TURN, 'smooth'),
-      k(7.5, SCAN_TURN),
+      k(5.98, CARRY_TURN, 'smooth'),
       k(8.6, SCAN_TURN, 'smooth'),
       k(10.5999, SCAN_TURN, 'linear'),
       k(10.6, [0, 0, 0]),
@@ -577,25 +599,31 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- the medicine itself, on stage for both demonstrations ----
     track('demoBox', 'visible', steps([
-      [0, false], [11.2, true], [14.5, false], [19.6, true], [23.4, false],
+      [0, false], [10.6, true], [14.1, false], [19.6, true], [23.4, false],
     ])),
     track('demoBox', 'opacity', [
       // it used to hold full opacity until the frame it was switched off, so it popped
       // rather than left. It fades from the moment it is clear of the tray and is gone
       // well before the case starts down into the basket at 15.2 — the return is the
       // instruction here, and nothing should still be drawing the eye when it happens.
-      k(11.2, 0), k(11.8, 1, 'smooth'), k(13.9, 1), k(14.4, 0, 'smooth'),
+      k(10.6, 0), k(11.15, 1, 'smooth'), k(13.5, 1), k(14.0, 0, 'smooth'),
       k(19.6, 0), k(20.4, 1, 'smooth'), k(22.8, 1), k(23.4, 0, 'smooth'),
     ]),
     track('demoBox', 'position', [
       k(0, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
-      k(11.2, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
-      k(13.6, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
+      k(10.6, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
+      /*
+       * It leaves with the lid, not after it. The rise used to wait until 13.6 — four
+       * tenths after the lid had finished coming off — so the beat played as two separate
+       * events with a hole between them. Starting it as the lid cracks makes one action of
+       * it: the case opens and the medicine comes out of it.
+       */
+      k(12.45, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
       // up out of the open tray, then away — the shot stays with the case, which is
       // what goes back to the basket
-      k(14.1, [DEMO[0], DEMO[1] + 0.075, DEMO[2]], 'smooth'),
-      k(14.5, [DEMO[0], DEMO[1] + 0.075, DEMO[2]]),
-      k(14.6, CARTON),   // repositioned while invisible, ready for the apply demo
+      k(13.4, [DEMO[0], DEMO[1] + 0.075, DEMO[2]], 'smooth'),
+      k(14.1, [DEMO[0], DEMO[1] + 0.075, DEMO[2]]),
+      k(14.2, CARTON),   // repositioned while invisible, ready for the apply demo
       k(26.4, CARTON),
     ]),
     track('demoBox', 'rotation', [
@@ -604,9 +632,9 @@ export const patientCollectOpd: SceneDef = {
       // used to start at 14.2 while the carton was still up, so what read on screen was
       // the medicine tilting as it rose out of the tray.
       k(0, [-Math.PI / 2, 0, Math.PI / 2]),
-      k(11.2, [-Math.PI / 2, 0, Math.PI / 2]),
-      k(14.5, [-Math.PI / 2, 0, Math.PI / 2]),
-      k(14.6, [0, 0, 0]),
+      k(10.6, [-Math.PI / 2, 0, Math.PI / 2]),
+      k(14.1, [-Math.PI / 2, 0, Math.PI / 2]),
+      k(14.2, [0, 0, 0]),
     ]),
 
     // ---- demonstration 2: peel the sticker off its backing and press it on ----
