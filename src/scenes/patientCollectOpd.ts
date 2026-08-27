@@ -56,8 +56,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1289, 0.0261, -0.0405]
-const CONTACT_TURN: [number, number, number] = [0.8626, -0.4836, 1.1703]
+const CONTACT: [number, number, number] = [0.1281, 0.0145, -0.0405]
+const CONTACT_TURN: [number, number, number] = [0.8544, -0.5014, 1.1528]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -82,8 +82,15 @@ const CARRY: [number, number, number] = [0.075, -0.03, -0.052]
  * the drawn fist, and only comes forward to `CARRY` once it is flat for the reader.
  */
 const HOLD: [number, number, number] = [0.085, -0.02, -0.112]
+/*
+ * And where it rides on the way out of the bay, before it is turned. `HOLD` is the depth
+ * an on-edge case needs to stay behind the drawn fist; lying flat, as it does all the way
+ * out, it needs less than half of that — and eleven centimetres behind the hand while the
+ * hand is still at the mouth of the bay puts the case back inside the cabinet, where the
+ * front panel hides it for the whole lift. It carries in the palm until it turns.
+ */
+const LIFT_HOLD: [number, number, number] = [0.085, -0.02, -0.055]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
-const RAISE_TURN: [number, number, number] = [1.45, -0.15, 0.06]
 const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
 
 /**
@@ -93,6 +100,23 @@ const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
  */
 const GRAB_AIM: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0.02, BOX_ON_SHELF[2]]
 
+/**
+ * Where the aim sits while the arm is still travelling. The arm swings about the shoulder
+ * on a fixed radius, so on the way in it sweeps across the case rather than towards it,
+ * and around 3.45 the drawn hand crosses the case's own volume. Coming in a few
+ * centimetres high keeps the hand above the lid through the swing and lets it settle down
+ * onto the case at the end, which is also how a hand reaches for something on a shelf.
+ */
+const APPROACH_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.1, GRAB_AIM[2]]
+
+/**
+ * Out of the bay before up. The case rides behind the fist, so a hand that goes straight
+ * up from the shelf takes the case up the *inside* of the front panel — it passes the top
+ * edge of the bay opening still a hand's depth inside the cabinet and is simply hidden for
+ * the whole lift. This aim draws the hand out of the mouth of the bay first and barely
+ * raises it; the rise is what follows.
+ */
+const OUT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.05, GRAB_AIM[2] + 0.17]
 /** what her hand is aimed at as she draws it out — the lift is the arm, not the prop */
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
 /** and where she stands to reach into the pick-up bay */
@@ -308,7 +332,16 @@ export const patientCollectOpd: SceneDef = {
       // between 5.4 and 6.7, by which point she is standing in the open holding the case
       // and it reads as shuffling; spread across the lift it is the step back you take
       // with something you have just picked up.
-      k(3.9, AT_BAY),
+      k(3.9, AT_BAY, 'accelerate'),
+      /*
+       * Most of the step is spent in the first half second of it. The board yaws to face
+       * the camera, so while she is standing at the bay her shoulder swings into the
+       * cabinet's front panel and the arm is drawn through it — she has to be clear of the
+       * face by the time the frame is wide enough to show it, which is a little after 4.2.
+       * The rest of the distance is spread over the remaining second so it still reads as
+       * one continuous step back rather than a retreat and a drift.
+       */
+      k(4.7, [0.27, 0, 0.888], 'smooth'),
       k(5.7, AT_FRONT, 'smooth'),
       // and she stays there. She used to walk across to the table as the cabinet
       // dissolved and walk back for the sticker, but the demonstrations do not play at
@@ -401,7 +434,14 @@ export const patientCollectOpd: SceneDef = {
     custom('patient', 'reachTarget', [
       // the rig lines the grip up with the target on screen, so aiming at the case itself
       // puts her hand on it while the board stays in front of the cabinet
-      k(0, GRAB_AIM),
+      k(0, APPROACH_AIM),
+      /*
+       * It comes down onto the case over the last stretch of the reach and is settled on
+       * it well before the handover, so the rig has the aim it was solved against by the
+       * time the case changes hands.
+       */
+      k(3.52, APPROACH_AIM, 'smooth'),
+      k(3.9, GRAB_AIM, 'smooth'),
       // she holds the aim through the contact beat, then lifts — the hand rises and takes
       // the case with it, which is the whole point of handing it over on the shelf
       /*
@@ -417,7 +457,8 @@ export const patientCollectOpd: SceneDef = {
        * that, which is enough to carry the seam and still reads as a lift.
        */
       k(4.1, GRAB_AIM, [0.3, 0.1, 0.3, 1]),
-      k(4.8, LIFT_AIM, 'smooth'),
+      k(4.55, OUT_AIM, 'smooth'),
+      k(5.1, LIFT_AIM, 'smooth'),
       k(5.4, LIFT_AIM),
       k(7.2, READ, 'smooth'),
       k(17.0, READ),
@@ -490,7 +531,10 @@ export const patientCollectOpd: SceneDef = {
        * jump of its own.
        */
       k(4.1, CONTACT, [0.3, 0.1, 0.3, 1]),
-      k(4.5, HOLD, 'smooth'),
+      k(4.6, LIFT_HOLD, 'smooth'),
+      k(5.4, LIFT_HOLD, 'smooth'),
+      // it drops back into the deeper hold as it turns on edge for the reader
+      k(5.98, HOLD, 'smooth'),
       k(7.2, HOLD, 'smooth'),
       k(7.8, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
@@ -511,10 +555,20 @@ export const patientCollectOpd: SceneDef = {
       // posed. Only once it is clear does it turn flat, on the walk to the window.
       k(4.1, CONTACT_TURN),
       k(5.4, CONTACT_TURN, 'smooth'),
-      k(7.2, RAISE_TURN, 'smooth'),
-      k(7.5, RAISE_TURN),
-      // the QR is printed on the lid, so the lid has to be turned to face the reader —
-      // held flat the code points at the ceiling and the beam plays over the side wall
+      /*
+       * The QR is printed on the lid, so the lid has to be turned to face the reader —
+       * held flat the code points at the ceiling and the beam plays over the side wall.
+       *
+       * She turns it as she comes out of the bay, not at the window: the turn used to run
+       * to a raised pose at 7.2 and only square up to the reader at 8.6, so for the whole
+       * walk across the face of the cabinet the case was carried edge-on and then rolled
+       * over at the last moment. Turning it on the way out is what a person does — the
+       * hand finds the reading face while the arm is still travelling — and it leaves the
+       * approach to the window with nothing to do but arrive.
+       */
+      k(5.98, SCAN_TURN, 'smooth'),
+      k(7.2, SCAN_TURN, 'smooth'),
+      k(7.5, SCAN_TURN),
       k(8.6, SCAN_TURN, 'smooth'),
       k(10.5999, SCAN_TURN, 'linear'),
       k(10.6, [0, 0, 0]),
