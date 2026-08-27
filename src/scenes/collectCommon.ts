@@ -27,7 +27,11 @@ export const TAKE: [number, number, number] = [SLOT[0], SLOT[1] - 0.05, SLOT[2] 
 export const BOX_ON_SHELF: [number, number, number] = [
   A.pickupShelf[0],
   A.pickupShelf[1] + 0.026,
-  A.pickupShelf[2] + 0.05,
+  // and well forward on it, towards the opening. The rig swings the arm about the
+  // shoulder and cannot lengthen it, so the grip lands short along the line it is aimed
+  // down; a case pushed to the back of the shelf is simply out of the puppet's range, and
+  // under a tight insert that shortfall is a third of the frame.
+  A.pickupShelf[2] + 0.14,
 ]
 /** what the pick-up insert frames: the open bay with the case sitting in it */
 export const BAYVIEW: [number, number, number] = [A.pickup[0], A.pickupShelf[1] + 0.05, DOOR[2]]

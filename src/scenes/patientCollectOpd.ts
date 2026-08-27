@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.0994, 0.0839, -0.1782]
-const CONTACT_TURN: [number, number, number] = [0.6484, -0.2327, 1.2486]
+const CONTACT: [number, number, number] = [0.0314, 0.0624, -0.0061]
+const CONTACT_TURN: [number, number, number] = [0.6822, 0.0379, 1.5888]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -99,6 +99,19 @@ const GRAB_AIM: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
 /** and where she stands to reach into the pick-up bay */
 const AT_BAY: [number, number, number] = [0.3, 0, 0.78]
+/**
+ * Where she stands for the grab itself, a hand's width closer in.
+ *
+ * The rig swings the arm about the shoulder and cannot lengthen it, so the grip always
+ * lands a little short along the line it is aimed down. From 0.78 the shortfall is about
+ * 15 cm, which at a metre reads as the fingers closing on the near edge of the case and
+ * at 0.82 m reads as a hand grasping a third of a frame away from it. She steps in for
+ * the reach and back out as she straightens.
+ *
+ * She can stand this close only because the body is not drawn during the insert — at this
+ * range the cut-out board would be through the front of the cabinet.
+ */
+const AT_GRAB: [number, number, number] = [0.3, 0, 0.6]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 
@@ -126,8 +139,8 @@ const SCREEN_VIEW: [number, number, number] = [A.screen[0], A.screen[1] - 0.1, A
 const mix = (a: Vec3, b: Vec3, u: number): Vec3 =>
   [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]
 const PUSH_T0 = 0.4
-const PUSH_T1 = 3.2
-const PUSH_DIST = 1.06
+const PUSH_T1 = 2.9
+const PUSH_DIST = 0.82
 const PUSH_STEPS = 28
 const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
   const v = i / PUSH_STEPS
@@ -146,33 +159,27 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
 /**
  * And the pull back out, built the same way as the push.
  *
- * It starts while she is still reaching, not once she has hold of the case: the handover
- * happens at 4.6, and a frame that is already widening at that moment reads as a person
- * taking something off a shelf rather than as a prop changing hands. Waiting for the
- * fingers to close and only then pulling put the tightest framing of the whole scene on
- * the one beat that cannot survive it.
+ * It waits for the whole grab. The insert holds from 2.9 to 4.9 — reach, contact, lift —
+ * and only then opens up. At 0.82 m the frame is the bay and the hand in it and nothing
+ * else: her stooped body is off the bottom of it entirely, which is the point. The one
+ * thing that never looks right in a stoop is the stoop.
  *
  * Same reasoning as `push` for the shape: constant apparent zoom rate means the distance
  * grows by a constant ratio, so it is sampled off an exponential and every key is linear
  * except the last. The bay stays centred while the camera swings round to her right —
  * pulling straight back onto her puts her shoulder across the frame.
- *
- * The rig aims her hand in screen space and re-solves that aim every frame until the
- * reach and its target have both held still for half a second. The reach settles at 4.15
- * and the target starts moving again at 4.7, so the loop is live across this whole move
- * and the hand tracks the case through it — it is a camera move *after* the aim locks
- * that leaves a hand grasping at stale geometry, not one during.
  */
-const PULL_T0 = 3.25
-const PULL_T1 = 5.9
-const PULL_STEPS = 27
-/**
- * How far out it gets. The handover at 4.6 is the weakest frame in the scene — a prop
- * changing owners — and the only real defence is not to be looking closely when it
- * happens. By 4.6 this is at 2.2 m against the insert's 1.06, better than twice the
- * distance, and it is still moving.
- */
+const PULL_T0 = 4.3
+const PULL_T1 = 6.2
+const PULL_STEPS = 19
 const PULL_DIST = 2.4
+/**
+ * What the widening frame is centred on. Straight from the shelf to the bay it left the
+ * hand riding the top edge the whole way out — the action has left the shelf by then. It
+ * follows the lift first, then settles on the bay a little high, where the case she is
+ * holding sits about a third down the frame instead of on the rim.
+ */
+const PULL_HIGH: Vec3 = [DOOR[0], DOOR[1] + 0.16, DOOR[2]]
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
   /*
@@ -185,7 +192,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const u = cubicBezier('standard', v)
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
-    target: mix(BOX_ON_SHELF, DOOR, u),
+    target: u < 0.4 ? mix(BOX_ON_SHELF, LIFT_AIM, u / 0.4) : mix(LIFT_AIM, PULL_HIGH, (u - 0.4) / 0.6),
     dist: PUSH_DIST * Math.pow(PULL_DIST / PUSH_DIST, u),
     yaw: 34.6 + (42 - 34.6) * u,
     pitch: 13 + (12 - 13) * u,
@@ -211,8 +218,11 @@ export const patientCollectOpd: SceneDef = {
       // and locks that aim half a second after the reach stops changing, so a camera still
       // moving through the grab leaves the hand grasping at thin air.
       ...push.map((s) => k(s.t, shot(s.target, s.dist, 34.6, 13), s.ease)),
-      // a beat at the tightest framing while her hand comes into the bay, then straight
-      // back out again under the grab — see `pull` above
+      // The insert holds for the reach and the contact, then opens straight away. At this
+      // distance the lift is half the frame, so a parked camera loses her hand off the
+      // top; widening from the moment she has hold keeps it in shot, and the body that
+      // comes back into frame is one already on its way up rather than a stoop.
+      k(4.2, shot(BOX_ON_SHELF, PUSH_DIST, 34.6, 13), 'smooth'),
       ...pull.map((s) => k(s.t, shot(s.target, s.dist, s.yaw, s.pitch), s.ease)),
       // then back onto her, and across the cabinet face to the window
       k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -238,6 +248,7 @@ export const patientCollectOpd: SceneDef = {
     track('target', 'position', [
       k(0, FULL),
       ...push.map((s) => k(s.t, s.target, s.ease)),
+      k(4.2, BOX_ON_SHELF),
       ...pull.map((s) => k(s.t, s.target, s.ease)),
       k(6.7, FRONT_WIDE, 'smooth'),
       k(7.2, FRONT_WIDE),
@@ -260,7 +271,7 @@ export const patientCollectOpd: SceneDef = {
     custom('camera', 'fov', [
       // held through the push: a focal length changing under a dolly is a second move on
       // top of the first, and they do not cancel
-      k(0, 23), k(4.5, 23), k(5.9, 23, 'smooth'), k(6.7, 24, 'smooth'), k(7.2, 24),
+      k(0, 23), k(4.9, 23), k(6.3, 23, 'smooth'), k(6.7, 24, 'smooth'), k(7.2, 24),
       k(8.0, 22, 'smooth'), k(10.5, 22), k(11.3, 22, 'smooth'), k(16.0, 22),
       k(17.0, 22, 'smooth'), k(18.8, 23, 'smooth'),
       k(20.4, 24, 'smooth'), k(22.8, 24), k(24.2, 22, 'smooth'), k(26.4, 22),
@@ -274,7 +285,7 @@ export const patientCollectOpd: SceneDef = {
       [0, 'medicineList'], [1.6, 'collectingDone'],
     ])),
     custom('kiosk', 'doorOpen', [
-      k(1.6, 0), k(2.6, 1, 'decelerate'), k(5.5, 1), k(6.6, 0, 'accelerate'),
+      k(1.6, 0), k(2.4, 1, 'decelerate'), k(5.5, 1), k(6.6, 0, 'accelerate'),
     ]),
     // the window closes on the case she holds up to it — the QR is on its lid
     custom('kiosk', 'scanGlow', [
@@ -307,9 +318,9 @@ export const patientCollectOpd: SceneDef = {
       // shoulder — it cannot lengthen it — so where the hand lands is set by how close she
       // is standing, and from her talking distance the fingers stopped short of the shelf.
       k(1.4, [-1.5, 0, 1.95], 'smooth'),
-      k(3.0, AT_BAY, 'smooth'),
-      k(4.4, AT_BAY),
-      k(5.5, AT_BAY),
+      k(2.8, AT_GRAB, 'smooth'),
+      k(4.3, AT_GRAB),
+      k(5.4, AT_BAY, 'smooth'),
       k(6.7, AT_FRONT, 'smooth'),
       k(9.8, AT_FRONT),
       // she walks to the table as the cabinet dissolves, and is repositioned there while
@@ -332,9 +343,23 @@ export const patientCollectOpd: SceneDef = {
        * cabinet. She stands up square for the grab and only leans back into the shot
        * once the camera has pulled out again.
        */
-      k(1.4, 0.3), k(2.8, 0.3, 'smooth'), k(3.4, 0.08, 'smooth'),
-      k(5.3, 0.08, 'smooth'), k(6.5, 0.45, 'smooth'), k(26.4, 0.45),
+      k(1.4, 0.3), k(2.6, 0.3, 'smooth'), k(3.2, 0.08, 'smooth'),
+      k(4.8, 0.08, 'smooth'), k(6.2, 0.45, 'smooth'), k(26.4, 0.45),
     ]),
+    /*
+     * Nothing but the arm is drawn while the camera is in tight. The rig folds the whole
+     * upper body to get the hand down to a shelf at waist height, and a stoop drawn as a
+     * flat cut-out is the least convincing thing the puppet does — so under the insert the
+     * body, torso and shadow are dropped and what plays is a hand going into a hatch.
+     *
+     * It comes back at 4.6, while the frame is still tight enough that the body is off the
+     * bottom of it, so there is nothing to see appear — and by the time the widening
+     * reaches her she has straightened.
+     */
+    // held, not ramped: `steps` keys are linear, so a lone pair either side of the beat
+    // crosses the 0.5 threshold somewhere in the middle of it — the body came back a
+    // tenth of a second into the lift, mid-stoop
+    custom('patient', 'armOnly', steps([[0, 0], [2.85, 0], [2.9, 1], [4.55, 1], [4.6, 0]])),
     // into the bay -> up to the scan window with the case -> down while the sticker
     // prints -> up to the slot -> resting on the medicine
     track('patient', 'reach', [
@@ -354,9 +379,9 @@ export const patientCollectOpd: SceneDef = {
        * the rig lock its aim (half a second after the reach stops changing) before the
        * case moves, so the case comes up out of a hand that is not still drifting.
        */
-      k(1.4, 0), k(3.0, 0, 'standard'),
-      k(4.15, 1, 'smooth'),
-      k(5.4, 1, 'smooth'),
+      k(1.4, 0), k(2.8, 0, 'standard'),
+      k(3.7, 1, 'smooth'),
+      k(4.6, 1, 'smooth'),
       k(5.9, 0.6, 'smooth'), k(6.6, 0.35, 'smooth'), k(7.4, 0.35), k(8.4, 1, 'smooth'), k(9.8, 1),
       k(10.4, 0.3, 'smooth'), k(16.6, 0.3),
       k(17.6, 1, 'smooth'), k(19.2, 1), k(20, 0.55, 'smooth'),
@@ -375,10 +400,10 @@ export const patientCollectOpd: SceneDef = {
        * speed, so the torso used to take a third of the lean in the first two frames and
        * then settle, which is the jolt the arm was riding on top of.
        */
-      k(3.0, 0, 'smooth'),
-      k(3.95, 0.88, 'smooth'),
-      k(5.4, 0.88, 'smooth'),
-      k(6.2, 0, 'smooth'), k(26.4, 0),
+      k(2.8, 0, 'smooth'),
+      k(3.6, 1, 'smooth'),
+      k(4.2, 1, 'smooth'),
+      k(5.0, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
       // the rig lines the grip up with the target on screen, so aiming at the case itself
@@ -386,9 +411,9 @@ export const patientCollectOpd: SceneDef = {
       k(0, GRAB_AIM),
       // she holds the aim through the contact beat, then lifts — the hand rises and takes
       // the case with it, which is the whole point of handing it over on the shelf
-      k(4.7, GRAB_AIM, 'standard'),
-      k(5.4, LIFT_AIM, 'smooth'),
-      k(5.8, LIFT_AIM),
+      k(4.2, GRAB_AIM, 'standard'),
+      k(4.9, LIFT_AIM, 'smooth'),
+      k(5.4, LIFT_AIM),
       k(7.2, READ, 'smooth'),
       k(17.0, READ),
       k(18.0, TAKE, 'smooth'),
@@ -428,7 +453,7 @@ export const patientCollectOpd: SceneDef = {
      * ends one span and the key that opens the next sit a tenth of a millisecond apart.
      * No frame can land inside that gap and read a blend of the two.
      */
-    custom('case', 'attachTo', steps([[0, ''], [4.6, 'patient:grip'], [10.6, '']])),
+    custom('case', 'attachTo', steps([[0, ''], [4.1, 'patient:grip'], [10.6, '']])),
     /*
      * Up to the demonstration the carton inside is the one the case draws for itself, so
      * it rides the case exactly however the case is turned — a separate actor tracking it
@@ -445,13 +470,13 @@ export const patientCollectOpd: SceneDef = {
     ]),
     track('case', 'position', [
       k(0, BOX_ON_SHELF),
-      k(4.5999, BOX_ON_SHELF, 'linear'),
+      k(4.0999, BOX_ON_SHELF, 'linear'),
       // ---- held: an offset in her hand's frame ----
-      k(4.6, CONTACT),
-      k(4.7, CONTACT, 'smooth'),
+      k(4.1, CONTACT),
+      k(4.2, CONTACT, 'smooth'),
       // out of the bay riding deep, because it is still on edge; it only comes forward in
       // her hand once it has turned flat for the reader
-      k(5.9, HOLD, 'smooth'),
+      k(5.4, HOLD, 'smooth'),
       k(7.2, HOLD, 'smooth'),
       k(7.8, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
@@ -465,14 +490,14 @@ export const patientCollectOpd: SceneDef = {
     ]),
     track('case', 'rotation', [
       k(0, [0, 0.2, 0]),
-      k(4.5999, [0, 0.2, 0], 'linear'),
+      k(4.0999, [0, 0.2, 0], 'linear'),
       // Nothing turns it through the pick-up. It is rigid in her hand from the moment she
       // closes on it, held exactly as it stood on the shelf, all the way out of the bay —
       // a case that rolls over between the fingers as they close reads as a prop being
       // posed. Only once it is clear does it turn flat, on the walk to the window.
-      k(4.6, CONTACT_TURN),
-      k(4.7, CONTACT_TURN, 'smooth'),
-      k(5.9, CONTACT_TURN, 'smooth'),
+      k(4.1, CONTACT_TURN),
+      k(4.2, CONTACT_TURN, 'smooth'),
+      k(5.4, CONTACT_TURN, 'smooth'),
       k(7.2, RAISE_TURN, 'smooth'),
       k(7.5, RAISE_TURN),
       // the QR is printed on the lid, so the lid has to be turned to face the reader —
