@@ -1,5 +1,5 @@
 import type { SceneDef, Vec3 } from '../anim/types'
-import { cubicBezier, type Ease } from '../anim/easing'
+import type { Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import {
   A, BASKET, BASKET_VIEW, BOX_ON_SHELF, CARTON, DEMO, DOOR, FULL, IN_BASKET,
@@ -56,8 +56,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1312, 0.0073, -0.1111]
-const CONTACT_TURN: [number, number, number] = [0.7182, -0.4745, 1.0654]
+const CONTACT: [number, number, number] = [0.1289, 0.0261, -0.0405]
+const CONTACT_TURN: [number, number, number] = [0.8626, -0.4836, 1.1703]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -96,7 +96,7 @@ const GRAB_AIM: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0
 /** what her hand is aimed at as she draws it out — the lift is the arm, not the prop */
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
 /** and where she stands to reach into the pick-up bay */
-const AT_BAY: [number, number, number] = [0.3, 0, 0.78]
+const AT_BAY: [number, number, number] = [0.3, 0, 0.75]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 
@@ -168,13 +168,14 @@ const PULL_HIGH: Vec3 = [DOOR[0], DOOR[1] + 0.16, DOOR[2]]
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
   /*
-   * Front-loaded, not symmetric. A smoothstep spends its first half creeping, so half a
-   * second after it started the frame had barely changed and the pull did not read as
-   * having begun at all. `standard` leaves rest just as gently but is a third of the way
-   * out within two tenths of a second and past halfway by 4.0, which is where the widening
-   * has to be visible — the handover is at 4.6.
+   * Even, not front-loaded. `standard` puts a third of the move in its first two tenths,
+   * which at this size is a lurch — the frame leaps and then crawls for two seconds. It
+   * needed that when the pull started at 4.3 and had a handover to get clear of; starting
+   * at 3.8 there is time to spend, so this is a plain smoothstep: at rest at both ends,
+   * quickest in the middle, and no part of it more than about a third faster than the
+   * average.
    */
-  const u = cubicBezier('standard', v)
+  const u = v * v * (3 - 2 * v)
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
     target: u < 0.4 ? mix(BOX_ON_SHELF, LIFT_AIM, u / 0.4) : mix(LIFT_AIM, PULL_HIGH, (u - 0.4) / 0.6),
