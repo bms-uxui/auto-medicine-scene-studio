@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1029, -0.0033, -0.0279]
-const CONTACT_TURN: [number, number, number] = [0.8882, -0.5496, 1.1483]
+const CONTACT: [number, number, number] = [0.1113, -0.0158, -0.1168]
+const CONTACT_TURN: [number, number, number] = [0.6999, -0.4616, 1.0602]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -156,9 +156,9 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
  * except the last. The bay stays centred while the camera swings round to her right —
  * pulling straight back onto her puts her shoulder across the frame.
  */
-const PULL_T0 = 4.3
+const PULL_T0 = 3.8
 const PULL_T1 = 6.2
-const PULL_STEPS = 19
+const PULL_STEPS = 24
 const PULL_DIST = 2.4
 /**
  * What the widening frame is centred on. Straight from the shelf to the bay it left the
@@ -205,11 +205,10 @@ export const patientCollectOpd: SceneDef = {
       // and locks that aim half a second after the reach stops changing, so a camera still
       // moving through the grab leaves the hand grasping at thin air.
       ...push.map((s) => k(s.t, shot(s.target, s.dist, 34.6, 13), s.ease)),
-      // The insert holds for the reach and the contact, then opens straight away. At this
-      // distance the lift is half the frame, so a parked camera loses her hand off the
-      // top; widening from the moment she has hold keeps it in shot, and the body that
-      // comes back into frame is one already on its way up rather than a stoop.
-      k(4.2, shot(BOX_ON_SHELF, PUSH_DIST, 34.6, 13), 'smooth'),
+      // The insert holds only as long as the reach. It starts widening before her fingers
+      // close, not after: at this distance the lift is half the frame, so a parked camera
+      // loses her hand off the top, and the body that comes back into it is one already on
+      // its way up rather than a stoop.
       ...pull.map((s) => k(s.t, shot(s.target, s.dist, s.yaw, s.pitch), s.ease)),
       // then back onto her, and across the cabinet face to the window
       k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -235,7 +234,6 @@ export const patientCollectOpd: SceneDef = {
     track('target', 'position', [
       k(0, FULL),
       ...push.map((s) => k(s.t, s.target, s.ease)),
-      k(4.2, BOX_ON_SHELF),
       ...pull.map((s) => k(s.t, s.target, s.ease)),
       k(6.7, FRONT_WIDE, 'smooth'),
       k(7.2, FRONT_WIDE),
@@ -390,8 +388,8 @@ export const patientCollectOpd: SceneDef = {
       k(2.8, 0, 'smooth'),
       // at the limit for the grab: the waist is the only hinge that moves the hand much —
       // the arm swings about the shoulder, so aiming it lower barely lowers it
-      k(3.6, 1, 'smooth'),
-      k(4.2, 1, 'smooth'),
+      k(3.6, 0.94, 'smooth'),
+      k(4.2, 0.94, 'smooth'),
       k(5.0, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
