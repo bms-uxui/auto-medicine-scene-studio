@@ -635,11 +635,6 @@ export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynam
           <planeGeometry args={[D * 0.66, D * 0.66]} />
           <meshStandardMaterial map={qr} roughness={0.85} side={THREE.DoubleSide} />
         </mesh>
-        {/* and the channel label beside it */}
-        <mesh position={[-W * 0.24, H / 2 + LIP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[W * 0.34, D * 0.5]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
-        </mesh>
       </group>
       {/* the medicine lies flat on the base until it is lifted out */}
       <group ref={inner}>
