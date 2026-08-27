@@ -288,7 +288,9 @@ function PropActor({ actor }: { actor: ActorDef }) {
   })
   // the sticker reads its peel from the timeline; other primitives ignore it
   return (
-    <group ref={ref}>
+    // named so a pose can be read back off a specific prop: the graph is rebuilt as
+    // actors come and go, so position in the tree is not an identity
+    <group ref={ref} name={actor.id}>
       <Comp dyn={dyn} />
     </group>
   )

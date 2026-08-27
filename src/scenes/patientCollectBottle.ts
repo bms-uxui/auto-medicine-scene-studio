@@ -1,5 +1,5 @@
 import type { ActorDef, SceneDef, Vec3 } from '../anim/types'
-import type { Ease } from '../anim/easing'
+import { cubicBezier, type Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import { A, BASKET, DEMO, DOOR, FULL, READ, SCAN, SLOT, TABLE, TAKE } from './collectCommon'
 
@@ -63,8 +63,8 @@ const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] +
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
  * bottle settling into her grip.
  */
-const CONTACT: [number, number, number] = [0.0822, 0.061, -0.1018]
-const CONTACT_TURN: [number, number, number] = [0.7833, -0.3629, 1.2045]
+const CONTACT: [number, number, number] = [0.0769, 0.1111, -0.1425]
+const CONTACT_TURN: [number, number, number] = [0.7262, -0.2483, 1.2755]
 /** where it ends up sitting in her hand once it is out */
 const CARRY: [number, number, number] = [0.006, -0.066, -0.022]
 const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.75]
@@ -187,7 +187,9 @@ const PULL_T1 = 5.9
 const PULL_STEPS = 24
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
-  const u = v * v * (3 - 2 * v)
+  // front-loaded: a smoothstep creeps through its first half, so half a second in the
+  // frame had barely changed and the pull did not read as having begun
+  const u = cubicBezier('standard', v)
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
     target: mix(ON_SHELF, DOOR, u),

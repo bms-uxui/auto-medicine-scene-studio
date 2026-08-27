@@ -1,5 +1,5 @@
 import type { SceneDef, Vec3 } from '../anim/types'
-import type { Ease } from '../anim/easing'
+import { cubicBezier, type Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import {
   A, BASKET, BASKET_VIEW, BOX_ON_SHELF, CARTON, DEMO, DOOR, FULL, IN_BASKET,
@@ -52,9 +52,14 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * space — on screen the fingers are on the case, in world they are a hand's length in
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
  * case settling into her grip.
+ *
+ * It is solved, not typed: anything that changes where her hand ends up invalidates it,
+ * and the failure is loud — the case jumps the moment it changes hands. Re-phrasing the
+ * reach moved the settled arm by half a degree and reshaping the pull moved the camera
+ * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1082, 0.0583, -0.1023]
-const CONTACT_TURN: [number, number, number] = [0.7895, -0.3464, 1.2221]
+const CONTACT: [number, number, number] = [0.1021, 0.096, -0.159]
+const CONTACT_TURN: [number, number, number] = [0.6923, -0.2386, 1.2676]
 /**
  * How she carries it once it is out, and how far behind her hand it rides.
  *
@@ -161,7 +166,14 @@ const PULL_T1 = 5.9
 const PULL_STEPS = 24
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
-  const u = v * v * (3 - 2 * v)
+  /*
+   * Front-loaded, not symmetric. A smoothstep spends its first half creeping, so half a
+   * second after it started the frame had barely changed and the pull did not read as
+   * having begun at all. `standard` leaves rest just as gently but is a third of the way
+   * out within two tenths of a second and past halfway by 4.0, which is where the widening
+   * has to be visible — the handover is at 4.6.
+   */
+  const u = cubicBezier('standard', v)
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
     target: mix(BOX_ON_SHELF, DOOR, u),
