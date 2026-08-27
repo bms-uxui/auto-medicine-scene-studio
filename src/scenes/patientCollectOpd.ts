@@ -92,14 +92,6 @@ const HOLD: [number, number, number] = [0.085, -0.02, -0.112]
 const LIFT_HOLD: [number, number, number] = [0.085, -0.02, -0.055]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
 const SCAN_TURN: [number, number, number] = [-1.4387, 0.0632, -1.7614]
-/**
- * And how it is carried on the way there. Both of these are solved, not dialled in: the
- * QR is on the lid, so the lid's normal has to point at the scanner window on the panel,
- * and the offset that achieves that lives in the hand's frame — which turns with her arm
- * all the way across the cabinet. A single angle held through the carry therefore drifts,
- * and what it drifted into was the lid facing the camera instead of the machine.
- */
-const CARRY_TURN: [number, number, number] = [-1.6233, -0.8269, -2.0686]
 
 /**
  * What her hand is aimed at during the grab. The rig swings the arm about the shoulder
@@ -590,8 +582,18 @@ export const patientCollectOpd: SceneDef = {
        * hand finds the reading face while the arm is still travelling — and it leaves the
        * approach to the window with nothing to do but arrive.
        */
-      k(5.98, CARRY_TURN, 'smooth'),
-      k(8.6, SCAN_TURN, 'smooth'),
+      /*
+       * One turn, then rigid. She has no wrist: the fist is a drawing, so a case that keeps
+       * turning inside it while the hand holds still reads as the prop moving on its own.
+       * It is squared up once, while the arm is still coming out of the bay and the whole
+       * hand is turning with it, and after that it is locked to the hand — what changes the
+       * way it faces from there is her arm carrying it across to the window.
+       *
+       * The angle is solved for the reading: no single fixed angle can hold the lid on the
+       * scanner across the carry, since the arm swings some fifty degrees on the way, so it
+       * is aimed at the window for the moment it is read and allowed to drift before that.
+       */
+      k(5.98, SCAN_TURN, 'smooth'),
       k(10.5999, SCAN_TURN, 'linear'),
       k(10.6, [0, 0, 0]),
     ]),
