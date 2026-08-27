@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, TransformControls, useProgress } from '@react-three/drei'
-import { Bloom, EffectComposer, HueSaturation } from '@react-three/postprocessing'
+import { Bloom, EffectComposer, HueSaturation, N8AO, Vignette } from '@react-three/postprocessing'
 import { SceneRuntime } from '../scene/SceneRuntime'
 import { Exporter } from '../export/Exporter'
 import { drawOverlay, preloadOverlayIcons } from '../overlay/draw'
@@ -87,10 +87,18 @@ function PostFx({ enabled }: { enabled: boolean }) {
       {/* only the emissive parts — screen, scanner, bay light — should bloom */}
       {/* a wide smoothing band: a hard threshold makes the glow pop on and off as the
           scanner pulses across it */}
+      {/*
+        Contact darkening where surfaces meet — under the cabinet, in the pick-up recess,
+        along the skirting. It is the single biggest thing between "lit" and "in a room":
+        no light rig puts shade in a corner the way occlusion does.
+      */}
+      <N8AO aoRadius={0.32} intensity={1.05} distanceFalloff={0.7} quality="medium" color="#3d3730" halfRes />
       <Bloom intensity={0.25} luminanceThreshold={1.0} luminanceSmoothing={0.7} mipmapBlur />
       {/* the room came out grey and cold — a hospital, but the sad kind. A little more
           colour in the grade and a touch more exposure is most of the way back */}
       <HueSaturation saturation={0.2} />
+      {/* barely there: it settles the corners of a bright frame rather than framing it */}
+      <Vignette offset={0.32} darkness={0.28} />
     </EffectComposer>
   )
 }
@@ -193,7 +201,7 @@ export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'tra
   return (
     <div ref={holder} className="viewport" style={box ? { width: box.w, height: box.h } : { visibility: 'hidden' }}>
       <Canvas
-        shadows
+        shadows="soft"
         dpr={exporting ? exportDpr : [1, 1.5]}
         frameloop={exporting ? 'never' : 'always'}
         gl={{

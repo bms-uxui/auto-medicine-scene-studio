@@ -575,10 +575,10 @@ function LobbyModel({ url, tint, ...props }: { url: string; tint?: string } & Re
           mat.map = null
           mat.color.set(tint)
         } else {
-          mat.color.lerp(new THREE.Color('#f6f1e9'), 0.35)
+          mat.color.lerp(new THREE.Color('#f6f1e9'), 0.16)
         }
         mat.emissive = mat.color.clone()
-        mat.emissiveIntensity = tint ? 0.32 : 0.24
+        mat.emissiveIntensity = tint ? 0.1 : 0.05
         mat.roughness = Math.max(mat.roughness, 0.8)
         mat.metalness = Math.min(mat.metalness, 0.15)
         return mat
@@ -632,9 +632,9 @@ export function HospitalLobby(props: React.ComponentProps<'group'>) {
       {/* white wall, floor to ceiling */}
       <mesh position={[0, WALL_H / 2, Z]} receiveShadow>
         <planeGeometry args={[WALL_W, WALL_H]} />
-        {/* the wall faces the camera and takes almost no key, so it is painted well up
-            towards white or it renders as mid grey and the room reads as a basement */}
-        <meshStandardMaterial color="#ffffff" emissive="#fdf7ee" emissiveIntensity={0.62} roughness={1} metalness={0} />
+        {/* a trace of emissive only, to keep the far end of a very wide wall from going
+            grey; the light does the rest now */}
+        <meshStandardMaterial color="#f7f3ec" emissive="#fdf7ee" emissiveIntensity={0.12} roughness={0.98} metalness={0} />
       </mesh>
       {/*
         And a painted panel across the left of it, floor to shoulder height. A thin dado
@@ -644,12 +644,12 @@ export function HospitalLobby(props: React.ComponentProps<'group'>) {
       */}
       <mesh position={[PANEL_RIGHT - PANEL_W / 2, PANEL_H / 2, Z + 0.004]} receiveShadow>
         <planeGeometry args={[PANEL_W, PANEL_H]} />
-        <meshStandardMaterial color="#8ea2ae" emissive="#7e94a2" emissiveIntensity={0.42} roughness={1} metalness={0} />
+        <meshStandardMaterial color="#8ea3b0" emissive="#7e94a2" emissiveIntensity={0.1} roughness={0.95} metalness={0} />
       </mesh>
       {/* skirting, running the whole wall */}
       <mesh position={[0, 0.045, Z + 0.02]}>
         <boxGeometry args={[WALL_W, 0.09, 0.04]} />
-        <meshStandardMaterial color="#f4efe6" emissive="#e9e2d6" emissiveIntensity={0.4} roughness={1} metalness={0} />
+        <meshStandardMaterial color="#f6f1e8" emissive="#e9e2d6" emissiveIntensity={0.1} roughness={0.9} metalness={0} />
       </mesh>
 
       {/*
@@ -660,7 +660,7 @@ export function HospitalLobby(props: React.ComponentProps<'group'>) {
       */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0015, 0]} receiveShadow>
         <planeGeometry args={[26, 26]} />
-        <meshStandardMaterial map={floor} emissive="#efe0ca" emissiveIntensity={0.3} roughness={0.86} metalness={0} />
+        <meshStandardMaterial map={floor} emissive="#efe0ca" emissiveIntensity={0.06} roughness={0.72} metalness={0} />
       </mesh>
 
       {/* the department, lettered straight onto the painted panel */}

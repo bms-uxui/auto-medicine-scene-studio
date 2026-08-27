@@ -16,86 +16,98 @@ export interface LightingConfig {
 }
 
 export const LIGHTING_DEFAULTS: LightingConfig = {
-  key: 1.95,
-  fill: 0.28,
-  rim: 0.55,
-  env: 0.2,
+  key: 1.25,
+  fill: 0.35,
+  rim: 0.32,
+  env: 0.62,
   shadow: 0.75,
   spriteLit: 1,
 }
 
 /**
- * White-cyclorama product lighting: a soft top key with a cool fill and a warm rim,
- * over a shadow-catching floor so the ground stays pure white and only the contact
- * shadow reads. The environment is built from lightformers, so nothing is fetched at
- * runtime and exports stay deterministic.
+ * Daylight in a room, not a product shot on a cyclorama.
+ *
+ * The old rig was built for an infinite white floor: almost no image-based light, one hard
+ * key doing nearly all the work, and a warm rim whose only job was to peel the cabinet off
+ * a white background. Once the kiosk was standing in a room that read as flat and lifeless
+ * — surfaces with no bounce in them, a wall lit by nothing, and shadows with a hard edge
+ * the size of the machine.
+ *
+ * What is here instead is the light the reference has: a big soft window off to the left of
+ * camera as the key, a broad overhead as the room's own ceiling, and warm bounce coming
+ * back up off the wood floor. Most of the illumination is now image-based, which is what
+ * gives curved and recessed surfaces their gradient — a directional light alone cannot.
+ *
+ * It is still built from lightformers rather than an HDRI: nothing is fetched at runtime
+ * and the exports stay deterministic.
  */
 export function StudioStage({ config }: { config?: Partial<LightingConfig> }) {
   const cfg = { ...LIGHTING_DEFAULTS, ...config }
 
   return (
     <>
-      <Environment resolution={256} environmentIntensity={cfg.env}>
-        <color attach="background" args={['#f2f4f8']} />
-        {/* broad softbox overhead — the main highlight along the cabinet top */}
-        <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, 5, 1.5]} scale={[9, 5, 1]} rotation={[-Math.PI / 2.4, 0, 0]} />
-        {/* wrap-around side panels keep the white shell from going grey */}
-        <Lightformer form="rect" intensity={1.0} color="#dbe7ff" position={[-5, 2.4, 2]} scale={[5, 6, 1]} rotation={[0, Math.PI / 3, 0]} />
-        <Lightformer form="rect" intensity={0.8} color="#fff2e2" position={[5, 2.2, -1.5]} scale={[5, 6, 1]} rotation={[0, -Math.PI / 2.6, 0]} />
-        {/* narrow strip behind the camera for the specular line down the screen bezel */}
-        <Lightformer form="rect" intensity={1.4} color="#ffffff" position={[1.5, 2.2, 6]} scale={[2, 4, 1]} />
-        <Lightformer form="ring" intensity={0.5} color="#ffffff" position={[0, 1.2, -6]} scale={[6, 6, 1]} />
+      <Environment resolution={512} environmentIntensity={cfg.env}>
+        {/* the room's own value, which is what fills the shadows */}
+        <color attach="background" args={['#e9eef2']} />
+        {/* the window: tall, warm and off to camera-left — the source everything is keyed to */}
+        <Lightformer form="rect" intensity={3.4} color="#fff1dc" position={[-4.2, 2.2, 3.4]} scale={[4.5, 4.5, 1]} rotation={[0, Math.PI / 3.4, 0]} />
+        {/* a second, dimmer pane further back so the falloff along the wall is not linear */}
+        <Lightformer form="rect" intensity={1.5} color="#ffeed6" position={[-5, 2.1, -0.6]} scale={[3, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
+        {/* the ceiling: broad and neutral, the room's ambient */}
+        <Lightformer form="rect" intensity={1.15} color="#ffffff" position={[0, 5.2, 0.6]} scale={[11, 8, 1]} rotation={[-Math.PI / 2, 0, 0]} />
+        {/* and the floor throwing warmth back up — pale wood under a lit room does this */}
+        <Lightformer form="rect" intensity={0.5} color="#f7e3c6" position={[0, -0.6, 1.2]} scale={[10, 8, 1]} rotation={[Math.PI / 2, 0, 0]} />
+        {/* a cool panel behind the camera keeps the shadow side from going brown */}
+        <Lightformer form="rect" intensity={0.7} color="#e8f0ff" position={[2.5, 2, 6]} scale={[4, 4, 1]} />
       </Environment>
 
-      <hemisphereLight args={['#fff4e6', '#e8e4dc', 0.12]} />
+      {/* sky and the bounce off a warm floor, which the environment alone under-reads */}
+      <hemisphereLight args={['#fdf3e6', '#f0e2cc', 0.28]} />
 
-      {/* key: high and camera-left, tight shadow frustum for a crisp contact */}
+      {/*
+        The sun through that window. One shadow caster, not two: two of them crossed the
+        cabinet with a second shadow at a different angle, which is the thing that reads as
+        studio lighting more than anything else.
+      */}
       <directionalLight
         castShadow
-        position={[3.6, 3.6, 2.6]}
+        position={[-4.4, 4.6, 3.2]}
         intensity={cfg.key}
-        color="#fff8f0"
-        shadow-mapSize={[1536, 1536]}
+        color="#fff4e4"
+        shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0002}
-        shadow-normalBias={0.02}
+        shadow-normalBias={0.025}
+        shadow-radius={4}
         shadow-camera-near={0.5}
-        shadow-camera-far={18}
-        shadow-camera-left={-3.2}
-        shadow-camera-right={3.2}
-        shadow-camera-top={3.4}
+        shadow-camera-far={22}
+        shadow-camera-left={-5.5}
+        shadow-camera-right={5.5}
+        shadow-camera-top={4.2}
         shadow-camera-bottom={-1.6}
       />
-      {/* overhead light: its shadow is what actually grounds the cabinet */}
-      <directionalLight
-        castShadow
-        position={[0.5, 7, 1.1]}
-        intensity={0.9}
-        color="#ffffff"
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0002}
-        shadow-normalBias={0.02}
-        shadow-camera-near={0.5}
-        shadow-camera-far={14}
-        shadow-camera-left={-2.2}
-        shadow-camera-right={2.2}
-        shadow-camera-top={2.2}
-        shadow-camera-bottom={-2.2}
-      />
-      {/* cool fill opens up the shadow side without flattening the form */}
-      <directionalLight position={[-4.5, 2.6, 2.4]} intensity={cfg.fill} color="#cfe0ff" />
-      {/* warm rim separates the cabinet from the white background */}
-      <spotLight position={[-2.2, 3.8, -3.4]} angle={0.9} penumbra={1} intensity={cfg.rim} color="#ffd9b0" distance={14} />
+      {/* the ceiling as a light rather than only as an image: it is what lifts the tops */}
+      <directionalLight position={[0.6, 7, 1.4]} intensity={0.34} color="#fffaf2" />
+      {/* fill from camera-right, cool, opening the shadow side without flattening it */}
+      <directionalLight position={[4.6, 2.4, 3.2]} intensity={cfg.fill} color="#dceaff" />
+      {/*
+        And a soft one from the camera itself. The pick-up bay is a deep recess facing the
+        lens: keyed from a window off to the left, no light reaches inside it at all and the
+        insert that the whole grab is played in came out nearly black. This is the bounce a
+        real room has coming off everything behind the camera.
+      */}
+      <directionalLight position={[0.6, 1.6, 6]} intensity={0.5} color="#fff6ea" />
+      {/* a little separation on the cabinet's right shoulder, where the wall goes white */}
+      <spotLight position={[3.4, 3.6, -2.2]} angle={1.0} penumbra={1} intensity={cfg.rim} color="#ffe8cc" distance={16} />
 
-      {/* the cabinet carries its own contact pad, so no extra render target is needed here */}
-
-      {/* one near-white floor that catches the cast shadow */}
+      {/*
+        The white floor stays, a millimetre and a half under the room's boards. It is what
+        the demonstrations stand on once the room has dissolved, and it is what the contact
+        shadows were tuned against.
+      */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />
-        {/* deliberately below white: a blown-out floor clips and swallows the shadow */}
         <meshStandardMaterial color="#ffffff" roughness={1} metalness={0} />
       </mesh>
-      {/* grounding shadow: tight and dark at the base, soft further out */}
-
     </>
   )
 }
