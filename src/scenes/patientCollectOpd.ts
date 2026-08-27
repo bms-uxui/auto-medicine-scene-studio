@@ -91,7 +91,6 @@ const HOLD: [number, number, number] = [0.085, -0.02, -0.112]
  */
 const LIFT_HOLD: [number, number, number] = [0.085, -0.02, -0.055]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
-const SCAN_TURN: [number, number, number] = [-1.4387, 0.0632, -1.7614]
 
 /**
  * What her hand is aimed at during the grab. The rig swings the arm about the shoulder
@@ -565,36 +564,16 @@ export const patientCollectOpd: SceneDef = {
     track('case', 'rotation', [
       k(0, [0, 0.2, 0]),
       k(4.0999, [0, 0.2, 0], 'linear'),
-      // Nothing turns it through the pick-up. It is rigid in her hand from the moment she
-      // closes on it, held exactly as it stood on the shelf, all the way out of the bay —
-      // a case that rolls over between the fingers as they close reads as a prop being
-      // posed. Only once it is clear does it turn flat, on the walk to the window.
+      /*
+       * Nothing turns it, at any point. It is rigid in her hand from the moment she closes
+       * on it, held exactly as it stood on the shelf, all the way to the window — she has
+       * no wrist, so a case that turns inside a fist that is a drawing reads as the prop
+       * moving on its own. The code is on the end of the case rather than the lid for the
+       * same reason: it faces out of the bay where it stands, so nothing has to be rolled
+       * over to present it.
+       */
       k(4.1, CONTACT_TURN),
-      k(5.4, CONTACT_TURN, 'smooth'),
-      /*
-       * The QR is printed on the lid, so the lid has to be turned to face the reader —
-       * held flat the code points at the ceiling and the beam plays over the side wall.
-       *
-       * She turns it as she comes out of the bay, not at the window: the turn used to run
-       * to a raised pose at 7.2 and only square up to the reader at 8.6, so for the whole
-       * walk across the face of the cabinet the case was carried edge-on and then rolled
-       * over at the last moment. Turning it on the way out is what a person does — the
-       * hand finds the reading face while the arm is still travelling — and it leaves the
-       * approach to the window with nothing to do but arrive.
-       */
-      /*
-       * One turn, then rigid. She has no wrist: the fist is a drawing, so a case that keeps
-       * turning inside it while the hand holds still reads as the prop moving on its own.
-       * It is squared up once, while the arm is still coming out of the bay and the whole
-       * hand is turning with it, and after that it is locked to the hand — what changes the
-       * way it faces from there is her arm carrying it across to the window.
-       *
-       * The angle is solved for the reading: no single fixed angle can hold the lid on the
-       * scanner across the carry, since the arm swings some fifty degrees on the way, so it
-       * is aimed at the window for the moment it is read and allowed to drift before that.
-       */
-      k(5.98, SCAN_TURN, 'smooth'),
-      k(10.5999, SCAN_TURN, 'linear'),
+      k(10.5999, CONTACT_TURN, 'linear'),
       k(10.6, [0, 0, 0]),
     ]),
     // the table and basket are real furniture — no fade tracks, they are simply there

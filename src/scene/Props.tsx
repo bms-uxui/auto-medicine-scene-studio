@@ -566,6 +566,8 @@ export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynam
   const H = 0.05
   /** how deep the lid's skirt comes down over the base */
   const LIP = 0.014
+  /** the code square on the end wall, which is only H tall — the wall sets the size */
+  const QR = H * 0.76
   const shell = (
     // low roughness on a plane tilting up into the overhead lightformer threw a hard
     // blown-out highlight across the lid right as it lifts into a close shot
@@ -622,20 +624,24 @@ export function PlasticCase({ dyn, ...props }: { dyn?: React.RefObject<PropDynam
             {shell}
           </mesh>
         ))}
-        {/*
-          The hospital's QR label, stuck on the lid. This is what the patient holds up to
-          the scan window — the case is read before it is opened, so the code has to be on
-          the outside of the lid and large enough to survive the wide shot.
-        */}
-        <mesh position={[W * 0.24, H / 2 + LIP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[D * 0.8, D * 0.8]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
-        </mesh>
-        <mesh position={[W * 0.24, H / 2 + LIP + 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[D * 0.66, D * 0.66]} />
-          <meshStandardMaterial map={qr} roughness={0.85} side={THREE.DoubleSide} />
-        </mesh>
       </group>
+      {/*
+        The hospital's QR label, stuck on the end of the case rather than its lid. That end
+        is the face that looks out of the bay where the case stands, and it stays that face
+        the whole way to the scan window: on the lid the code pointed at the ceiling, and
+        the only way to present it was to roll the case over in a hand that cannot turn.
+
+        It is on the base, not the lid, so it is still there once the lid comes off — and
+        it sits a hair proud of the wall so it does not fight it for depth.
+      */}
+      <mesh position={[W / 2 + 0.0006, 0.002, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[QR + 0.006, QR + 0.006]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.85} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[W / 2 + 0.0012, 0.002, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[QR, QR]} />
+        <meshStandardMaterial map={qr} roughness={0.85} side={THREE.DoubleSide} />
+      </mesh>
       {/* the medicine lies flat on the base until it is lifted out */}
       <group ref={inner}>
         <MedicinePackage rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[0, -H / 2 + 0.019, 0]} />
