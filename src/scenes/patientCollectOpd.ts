@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1363, -0.0143, -0.0279]
-const CONTACT_TURN: [number, number, number] = [0.8874, -0.551, 1.1469]
+const CONTACT: [number, number, number] = [0.1029, -0.0033, -0.0279]
+const CONTACT_TURN: [number, number, number] = [0.8882, -0.5496, 1.1483]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -388,8 +388,10 @@ export const patientCollectOpd: SceneDef = {
        * then settle, which is the jolt the arm was riding on top of.
        */
       k(2.8, 0, 'smooth'),
-      k(3.6, 0.88, 'smooth'),
-      k(4.2, 0.88, 'smooth'),
+      // at the limit for the grab: the waist is the only hinge that moves the hand much —
+      // the arm swings about the shoulder, so aiming it lower barely lowers it
+      k(3.6, 1, 'smooth'),
+      k(4.2, 1, 'smooth'),
       k(5.0, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
