@@ -55,9 +55,31 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  */
 const CONTACT: [number, number, number] = [0.1082, 0.0583, -0.1023]
 const CONTACT_TURN: [number, number, number] = [0.7895, -0.3464, 1.2221]
-/** where it ends up sitting in her hand once it is out */
-const CARRY: [number, number, number] = [0.004, -0.044, -0.042]
-const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.78]
+/**
+ * How she carries it once it is out, and how far behind her hand it rides.
+ *
+ * The depth here is a clearance, not a look. The rig is a cut-out: the fist is painted on
+ * a flat plane through the grip, so anything whose near face lands in front of that plane
+ * cuts through the drawn fingers, and anything pushed far behind it disappears into the
+ * arm. The usable band is only a few centimetres wide, and how wide depends entirely on
+ * how the case is turned — carried on edge it reaches 7.6 cm towards the camera and a
+ * third of it stood through her hand; carried flat, with the lid facing away, it reaches
+ * only 4 cm and sits clear at 5.2 cm back while still reading as a box she is holding.
+ *
+ * Flat is also the pose the scan window wants, so the turn to the reader at 8.6 became a
+ * settle instead of a flip.
+ */
+const CARRY: [number, number, number] = [0.004, -0.044, -0.052]
+const CARRY_TURN: [number, number, number] = [1.5, -0.12, 0.04]
+/**
+ * Held a shade deeper while it is still turning: the roll out of `CONTACT_TURN` swings a
+ * corner of the case forward through the plane on the way past, so the draw holds it back
+ * behind the fist until it is flat and only then brings it up to `CARRY`.
+ */
+const DRAW: [number, number, number] = [0.06, 0, -0.118]
+/** raised as she arrives at the window, and turned so the lid's QR faces the reader */
+const RAISE_TURN: [number, number, number] = [1.45, -0.15, 0.06]
+const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
 
 /**
  * What her hand is aimed at during the grab. The rig swings the arm about the shoulder
@@ -369,7 +391,8 @@ export const patientCollectOpd: SceneDef = {
       // ---- held: an offset in her hand's frame ----
       k(4.6, CONTACT),
       k(4.7, CONTACT, 'smooth'),
-      k(5.4, CARRY, 'smooth'),
+      k(4.9, DRAW, 'smooth'),
+      k(5.9, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
       // ---- loose again: world coordinates ----
       k(10.6, DEMO),
@@ -388,12 +411,12 @@ export const patientCollectOpd: SceneDef = {
       k(4.6, CONTACT_TURN),
       k(4.7, CONTACT_TURN, 'smooth'),
       k(5.4, CARRY_TURN, 'smooth'),
-      k(7.2, [0.05, -0.2, 0.68], 'smooth'),
-      k(7.5, [0.05, -0.2, 0.68]),
+      k(7.2, RAISE_TURN, 'smooth'),
+      k(7.5, RAISE_TURN),
       // the QR is printed on the lid, so the lid has to be turned to face the reader —
       // held flat the code points at the ceiling and the beam plays over the side wall
-      k(8.6, [1.25, -0.22, 0.05], 'smooth'),
-      k(10.5999, [1.25, -0.22, 0.05], 'linear'),
+      k(8.6, SCAN_TURN, 'smooth'),
+      k(10.5999, SCAN_TURN, 'linear'),
       k(10.6, [0, 0, 0]),
     ]),
     // the table and basket are real furniture — no fade tracks, they are simply there
