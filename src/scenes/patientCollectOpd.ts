@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1021, 0.096, -0.159]
-const CONTACT_TURN: [number, number, number] = [0.6923, -0.2386, 1.2676]
+const CONTACT: [number, number, number] = [0.0994, 0.0839, -0.1782]
+const CONTACT_TURN: [number, number, number] = [0.6484, -0.2327, 1.2486]
 /**
  * How she carries it once it is out, and how far behind her hand it rides.
  *
@@ -161,9 +161,16 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
  * and the hand tracks the case through it — it is a camera move *after* the aim locks
  * that leaves a hand grasping at stale geometry, not one during.
  */
-const PULL_T0 = 3.5
+const PULL_T0 = 3.25
 const PULL_T1 = 5.9
-const PULL_STEPS = 24
+const PULL_STEPS = 27
+/**
+ * How far out it gets. The handover at 4.6 is the weakest frame in the scene — a prop
+ * changing owners — and the only real defence is not to be looking closely when it
+ * happens. By 4.6 this is at 2.2 m against the insert's 1.06, better than twice the
+ * distance, and it is still moving.
+ */
+const PULL_DIST = 2.4
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
   /*
@@ -177,7 +184,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
     target: mix(BOX_ON_SHELF, DOOR, u),
-    dist: PUSH_DIST * Math.pow(1.9 / PUSH_DIST, u),
+    dist: PUSH_DIST * Math.pow(PULL_DIST / PUSH_DIST, u),
     yaw: 34.6 + (42 - 34.6) * u,
     pitch: 13 + (12 - 13) * u,
     ease: (i === PULL_STEPS ? 'smooth' : 'linear') as Ease,

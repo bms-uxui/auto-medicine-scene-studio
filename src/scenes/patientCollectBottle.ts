@@ -63,8 +63,8 @@ const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] +
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
  * bottle settling into her grip.
  */
-const CONTACT: [number, number, number] = [0.0769, 0.1111, -0.1425]
-const CONTACT_TURN: [number, number, number] = [0.7262, -0.2483, 1.2755]
+const CONTACT: [number, number, number] = [0.0728, 0.088, -0.1778]
+const CONTACT_TURN: [number, number, number] = [0.6454, -0.242, 1.2359]
 /** where it ends up sitting in her hand once it is out */
 const CARRY: [number, number, number] = [0.006, -0.066, -0.022]
 const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.75]
@@ -182,9 +182,16 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
  * linear except the last, and the bay stays centred while the camera swings round to her
  * right — pulling straight back onto her puts her shoulder across the frame.
  */
-const PULL_T0 = 3.5
+const PULL_T0 = 3.25
 const PULL_T1 = 5.9
-const PULL_STEPS = 24
+const PULL_STEPS = 27
+/**
+ * How far out it gets. The handover at 4.6 is the weakest frame in the scene — a prop
+ * changing owners — and the only real defence is not to be looking closely when it
+ * happens. By 4.6 this is at 2.2 m against the insert's 1.06, better than twice the
+ * distance, and it is still moving.
+ */
+const PULL_DIST = 2.4
 const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const v = i / PULL_STEPS
   // front-loaded: a smoothstep creeps through its first half, so half a second in the
@@ -193,7 +200,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
     target: mix(ON_SHELF, DOOR, u),
-    dist: PUSH_DIST * Math.pow(1.9 / PUSH_DIST, u),
+    dist: PUSH_DIST * Math.pow(PULL_DIST / PUSH_DIST, u),
     yaw: 34.6 + (42 - 34.6) * u,
     pitch: 13 + (12 - 13) * u,
     ease: (i === PULL_STEPS ? 'smooth' : 'linear') as Ease,
