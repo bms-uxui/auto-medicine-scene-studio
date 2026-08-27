@@ -337,14 +337,19 @@ export const patientCollectOpd: SceneDef = {
      * flat cut-out is the least convincing thing the puppet does — so under the insert the
      * body, torso and shadow are dropped and what plays is a hand going into a hatch.
      *
-     * It comes back at 4.6, while the frame is still tight enough that the body is off the
-     * bottom of it, so there is nothing to see appear — and by the time the widening
-     * reaches her she has straightened.
+     * It comes back as the camera widens, not after it. The channel is a level rather
+     * than a switch, so the body dissolves in over the same six tenths the frame takes to
+     * open — a shot that has opened up with nothing in it but an arm, and a figure
+     * appearing whole on one frame afterwards, are both worse than a body arriving with
+     * the room it is standing in.
+     *
+     * Going the other way it is a cut: the frame is tight enough at 2.9 that there is
+     * nothing on screen to see leave.
      */
-    // held, not ramped: `steps` keys are linear, so a lone pair either side of the beat
-    // crosses the 0.5 threshold somewhere in the middle of it — the body came back a
-    // tenth of a second into the lift, mid-stoop
-    custom('patient', 'armOnly', steps([[0, 0], [2.85, 0], [2.9, 1], [4.55, 1], [4.6, 0]])),
+    custom('patient', 'armOnly', [
+      k(0, 0), k(2.85, 0, 'linear'), k(2.9, 1, 'linear'),
+      k(3.8, 1, 'smooth'), k(4.4, 0, 'smooth'), k(26.4, 0),
+    ]),
     // into the bay -> up to the scan window with the case -> down while the sticker
     // prints -> up to the slot -> resting on the medicine
     track('patient', 'reach', [

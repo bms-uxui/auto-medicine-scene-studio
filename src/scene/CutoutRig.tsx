@@ -335,26 +335,36 @@ export function CutoutRig({
     if (!Number.isFinite(aimSwing.current)) aimSwing.current = rig.rest
     if (armPivot.current) armPivot.current.rotation.z = swing.current
 
-    // insert framing: only the arm is on screen, so drop the rest of the board
-    const armOnly = (d.armOnly ?? 0) > 0.5
-    if (bodyMesh.current) bodyMesh.current.visible = !armOnly
-    if (torsoMesh.current) torsoMesh.current.visible = !armOnly
-    if (blob.current) blob.current.visible = !armOnly
+    /*
+     * Insert framing: everything but the arm comes off the board.
+     *
+     * It is a fade, not a switch. A shot that opens up while the body is still dropped
+     * has an arm on its own in the middle of it, and the body arriving on one frame a
+     * moment later reads as a mistake — so the channel is a level, and the scene ramps it
+     * back down over however long the camera takes to widen.
+     */
+    const armOnly = THREE.MathUtils.clamp(d.armOnly ?? 0, 0, 1)
+    const bodyFade = 1 - armOnly
+    if (bodyMesh.current) bodyMesh.current.visible = bodyFade > 0.01
+    if (torsoMesh.current) torsoMesh.current.visible = bodyFade > 0.01
+    if (blob.current) blob.current.visible = bodyFade > 0.01
 
     const opacity = d.opacity ?? 1
     node.traverse((child) => {
       const mesh = child as THREE.Mesh
       if (!mesh.isMesh) return
       const mat = mesh.material as THREE.MeshStandardMaterial
-      mat.opacity = opacity
+      const isBody = mesh === bodyMesh.current || mesh === torsoMesh.current || mesh === blob.current
+      const o = isBody ? opacity * bodyFade : opacity
+      mat.opacity = o
       // Only blend while fading. A blended layer joins the transparent pass, which is
       // drawn before the kiosk's own transparent livery, so its edge texels mix with
       // the background instead of the cabinet — that is the pale outline.
-      mat.transparent = opacity < 0.999
+      mat.transparent = o < 0.999
       // alphaTest is compared against the texture alpha *after* opacity is applied, so a
       // fixed cut-off discards the whole figure until the fade passes it and then pops it
       // in at that opacity. Scaling the cut-off keeps the same silhouette all the way up.
-      mat.alphaTest = Math.max(0.02, EDGE_CUT * opacity)
+      mat.alphaTest = Math.max(0.02, EDGE_CUT * o)
     })
   })
 
