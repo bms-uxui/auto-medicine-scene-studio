@@ -63,8 +63,8 @@ const ON_SHELF: [number, number, number] = [A.pickupShelf[0], A.pickupShelf[1] +
  * front of it — and it eases back to `CARRY` as she draws it out, which reads as the
  * bottle settling into her grip.
  */
-const CONTACT: [number, number, number] = [0.107, 0.0801, -0.1778]
-const CONTACT_TURN: [number, number, number] = [0.6346, -0.2724, 1.1937]
+const CONTACT: [number, number, number] = [0.095, -0.0108, -0.1778]
+const CONTACT_TURN: [number, number, number] = [0.5781, -0.387, 1.0196]
 /** where it ends up sitting in her hand once it is out */
 const CARRY: [number, number, number] = [0.055, -0.05, -0.022]
 const CARRY_TURN: [number, number, number] = [0.05, -0.3, 0.75]

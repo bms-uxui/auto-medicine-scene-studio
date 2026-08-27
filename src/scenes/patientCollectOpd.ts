@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1481, 0.1069, -0.0279]
-const CONTACT_TURN: [number, number, number] = [0.9597, -0.3553, 1.3108]
+const CONTACT: [number, number, number] = [0.1363, -0.0143, -0.0279]
+const CONTACT_TURN: [number, number, number] = [0.8874, -0.551, 1.1469]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -398,8 +398,20 @@ export const patientCollectOpd: SceneDef = {
       k(0, GRAB_AIM),
       // she holds the aim through the contact beat, then lifts — the hand rises and takes
       // the case with it, which is the whole point of handing it over on the shelf
-      k(4.2, GRAB_AIM, 'standard'),
-      k(4.9, LIFT_AIM, 'smooth'),
+      /*
+       * The lift starts on the same frame the case changes hands, and is already moving
+       * on it. The attach can never be perfectly seamless — the case's offset in her hand
+       * is solved against where the rig settles, and that settles to within a few
+       * millimetres of the same pose, not to the same pose — and a few millimetres is
+       * nothing inside a move and visible in a frame that is otherwise dead still, which
+       * is what a hold either side of it made it.
+       *
+       * Not `decelerate`, though: leaving at full speed had the case a third of the way
+       * out of the bay two frames after she touched it. This leaves at about a third of
+       * that, which is enough to carry the seam and still reads as a lift.
+       */
+      k(4.1, GRAB_AIM, [0.3, 0.1, 0.3, 1]),
+      k(4.8, LIFT_AIM, 'smooth'),
       k(5.4, LIFT_AIM),
       k(7.2, READ, 'smooth'),
       k(17.0, READ),
@@ -465,7 +477,7 @@ export const patientCollectOpd: SceneDef = {
       // width up and out from the palm. It settles into the palm as the fingers close,
       // while the hand is still down inside the bay and the move is not on show — held
       // out there any longer it simply rides behind her forearm.
-      k(4.2, CONTACT, 'smooth'),
+      k(4.1, CONTACT, [0.3, 0.1, 0.3, 1]),
       k(4.7, HOLD, 'smooth'),
       k(7.2, HOLD, 'smooth'),
       k(7.8, CARRY, 'smooth'),
@@ -486,7 +498,6 @@ export const patientCollectOpd: SceneDef = {
       // a case that rolls over between the fingers as they close reads as a prop being
       // posed. Only once it is clear does it turn flat, on the walk to the window.
       k(4.1, CONTACT_TURN),
-      k(4.2, CONTACT_TURN, 'smooth'),
       k(5.4, CONTACT_TURN, 'smooth'),
       k(7.2, RAISE_TURN, 'smooth'),
       k(7.5, RAISE_TURN),
