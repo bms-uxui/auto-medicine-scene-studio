@@ -88,7 +88,9 @@ function PostFx({ enabled }: { enabled: boolean }) {
       {/* a wide smoothing band: a hard threshold makes the glow pop on and off as the
           scanner pulses across it */}
       <Bloom intensity={0.25} luminanceThreshold={1.0} luminanceSmoothing={0.7} mipmapBlur />
-      <HueSaturation saturation={0.1} />
+      {/* the room came out grey and cold — a hospital, but the sad kind. A little more
+          colour in the grade and a touch more exposure is most of the way back */}
+      <HueSaturation saturation={0.2} />
     </EffectComposer>
   )
 }
@@ -199,7 +201,7 @@ export function Viewport({ orbit, gizmoMode }: { orbit: boolean; gizmoMode: 'tra
           antialias: true,
           // ACES crushes the brand reds and blues; the neutral curve keeps them saturated
           toneMapping: THREE.NeutralToneMapping,
-          toneMappingExposure: 0.98,
+          toneMappingExposure: 1.03,
         }}
         camera={{ position: scene.camera.position, fov: scene.camera.fov, near: 0.15, far: 40 }}
         style={{ background: scene.background }}

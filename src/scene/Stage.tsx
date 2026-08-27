@@ -47,7 +47,7 @@ export function StudioStage({ config }: { config?: Partial<LightingConfig> }) {
         <Lightformer form="ring" intensity={0.5} color="#ffffff" position={[0, 1.2, -6]} scale={[6, 6, 1]} />
       </Environment>
 
-      <hemisphereLight args={['#eaf1ff', '#e6e2db', 0.09]} />
+      <hemisphereLight args={['#fff4e6', '#e8e4dc', 0.12]} />
 
       {/* key: high and camera-left, tight shadow frustum for a crisp contact */}
       <directionalLight

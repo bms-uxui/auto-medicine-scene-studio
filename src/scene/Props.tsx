@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { RoundedBox } from '@react-three/drei'
+import { RoundedBox, useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { BRAND } from './textures'
 import { textureFromImage } from './artTexture'
@@ -460,50 +460,134 @@ export function SyrupCarton(props: React.ComponentProps<'group'>) {
 }
 
 /**
- * The wayfinding sign on the wall: a pale panel with a cross, the department and an arrow.
- * Deliberately low-contrast — it is there to say "hospital", not to be read.
+ * The floor: light oak, laid in planks.
+ *
+ * A flat colour read as vinyl in a corridor. The planks are what make the room feel like
+ * somewhere a person would sit down and wait, and at the widths these films use they are
+ * a texture rather than a pattern — no plank is ever big enough in frame to be counted.
+ */
+function floorTexture() {
+  const canvas = document.createElement('canvas')
+  const S = 1024
+  canvas.width = S
+  canvas.height = S
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#e8d8c3'
+  ctx.fillRect(0, 0, S, S)
+
+  const rows = 12
+  const h = S / rows
+  for (let r = 0; r < rows; r++) {
+    // a little variation plank to plank, and the joints staggered row to row
+    const offset = (r % 2 ? 0.5 : 0.17) * S
+    for (let i = -1; i < 3; i++) {
+      const x = offset + i * (S / 2)
+      const shade = 0.965 + ((r * 7 + i * 13) % 5) * 0.011
+      ctx.fillStyle = `rgb(${Math.round(232 * shade)}, ${Math.round(216 * shade)}, ${Math.round(195 * shade)})`
+      ctx.fillRect(x, r * h, S / 2 - 2, h - 2)
+      // grain, a few soft strokes along the plank
+      ctx.strokeStyle = 'rgba(168, 141, 108, 0.14)'
+      ctx.lineWidth = 1
+      for (let g = 0; g < 4; g++) {
+        const y = r * h + 12 + g * (h / 4.6)
+        ctx.beginPath()
+        ctx.moveTo(x + 6, y)
+        ctx.bezierCurveTo(x + S / 6, y + 3, x + S / 3, y - 3, x + S / 2 - 8, y)
+        ctx.stroke()
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(3.2, 3.2)
+  tex.anisotropy = 8
+  return tex
+}
+
+/**
+ * The department, lettered straight onto the painted wall panel: a cross and two lines,
+ * white and transparent. On a plate of its own it read as a sign screwed to a wall in a
+ * public building; painted on, it reads as the room's own graphics.
  */
 function signTexture() {
   const canvas = document.createElement('canvas')
-  const W = 720
-  const H = 260
+  const W = 900
+  const H = 264
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, W, H)
   const TH = (weight: number, size: number) =>
     `${weight} ${size}px "Noto Sans Thai", Inter, Helvetica, Arial, sans-serif`
 
-  ctx.fillStyle = '#f7f9fa'
-  ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = '#dfe8ec'
-  ctx.fillRect(0, 0, 210, H)
-  // the cross, drawn as two bars rather than a glyph so no font has to carry it
-  ctx.fillStyle = '#8fb3c2'
-  ctx.fillRect(88, 62, 34, 136)
-  ctx.fillRect(37, 113, 136, 34)
+  // a cross, drawn as two bars so no font has to carry it
+  ctx.fillStyle = 'rgba(255,255,255,0.96)'
+  ctx.fillRect(34, 96, 88, 22)
+  ctx.fillRect(67, 63, 22, 88)
 
-  ctx.fillStyle = '#5d6b73'
-  ctx.font = TH(600, 62)
-  ctx.fillText('ห้องจ่ายยา', 246, 122)
-  ctx.font = TH(400, 40)
-  ctx.fillStyle = '#8d979d'
-  ctx.fillText('Pharmacy', 248, 182)
-
-  // arrow to the right, three strokes
-  ctx.strokeStyle = '#9fb0b8'
-  ctx.lineWidth = 9
-  ctx.beginPath()
-  ctx.moveTo(600, 130)
-  ctx.lineTo(680, 130)
-  ctx.moveTo(650, 100)
-  ctx.lineTo(682, 130)
-  ctx.lineTo(650, 160)
-  ctx.stroke()
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  ctx.font = TH(600, 76)
+  ctx.fillText('ห้องจ่ายยา', 160, 118)
+  ctx.font = TH(400, 44)
+  ctx.fillStyle = 'rgba(255,255,255,0.82)'
+  ctx.fillText('Pharmacy', 163, 182)
 
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 8
   return tex
+}
+
+const CHAIR_URL = '/models/lobby-chair/modern_arm_chair_01_1k.gltf'
+const PLANT_URL = '/models/lobby-plant/potted_plant_02_1k.gltf'
+
+/**
+ * A piece of the room's furniture, loaded from its own glTF.
+ *
+ * These are scanned assets, lit for daylight, and they come in far more contrasty than
+ * anything else on the set — dropped in as they are they read as two photographs parked
+ * against a drawn wall. Each one is cloned (the same chair stands three times, and a shared
+ * graph cannot), and its materials are lifted towards the room's own value so they sit in
+ * it rather than on top of it.
+ */
+function LobbyModel({ url, tint, ...props }: { url: string; tint?: string } & React.ComponentProps<'group'>) {
+  const { scene } = useGLTF(url)
+  const model = useMemo(() => {
+    const copy = scene.clone(true)
+    copy.traverse((child) => {
+      const mesh = child as THREE.Mesh
+      if (!mesh.isMesh) return
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      const lifted = mats.map((m) => {
+        const mat = (m as THREE.MeshStandardMaterial).clone()
+        if (tint) {
+          /*
+           * Repainted, not tinted. The scanned chair's own colour lives in its diffuse
+           * map, so lightening the material's colour multiplies a near-black texture by a
+           * paler number and it stays near-black — the row read as three dark holes in an
+           * otherwise bright room. Dropping the map and keeping the normals paints it the
+           * way the rest of the set is painted, and its shape still reads.
+           */
+          mat.map = null
+          mat.color.set(tint)
+        } else {
+          mat.color.lerp(new THREE.Color('#f6f1e9'), 0.35)
+        }
+        mat.emissive = mat.color.clone()
+        mat.emissiveIntensity = tint ? 0.32 : 0.24
+        mat.roughness = Math.max(mat.roughness, 0.8)
+        mat.metalness = Math.min(mat.metalness, 0.15)
+        return mat
+      })
+      mesh.material = Array.isArray(mesh.material) ? lifted : lifted[0]
+    })
+    return copy
+  }, [scene, tint])
+  return <primitive object={model} {...props} />
 }
 
 /**
@@ -521,59 +605,51 @@ function signTexture() {
  */
 export function HospitalLobby(props: React.ComponentProps<'group'>) {
   const sign = useMemo(() => signTexture(), [])
-  useEffect(() => () => sign.dispose(), [sign])
+  const floor = useMemo(() => floorTexture(), [])
+  useEffect(() => () => { sign.dispose(); floor.dispose() }, [sign, floor])
 
-  /** how far behind the cabinet the wall stands */
-  const Z = -1.6
+  /**
+   * How far behind the cabinet the wall stands. The kiosk is 83 cm deep and drawn around
+   * its centre, so its back is at -0.415 — this leaves it a few centimetres off the wall,
+   * which is where a machine like this is actually installed. It used to stand more than a
+   * metre out into the room, floating in the middle of the floor.
+   */
+  const Z = -0.45
   const WALL_W = 22
   const WALL_H = 6.4
-  /** the height of the painted dado band, which is what gives the wall a scale */
-  const DADO = 1.15
-
-  /** one waiting chair: a seat, a back and a pair of runners */
-  const chair = (x: number, key: number) => (
-    <group key={key} position={[x, 0, Z + 0.62]}>
-      <mesh position={[0, 0.43, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.46, 0.05, 0.44]} />
-        {/* a shade of blue, not another off-white: against a pale wall the chairs had no
-            edge at all and the row read as a smudge */}
-        <meshStandardMaterial color="#b7ccd8" emissive="#9db6c4" emissiveIntensity={0.35} roughness={0.8} metalness={0} />
-      </mesh>
-      <mesh position={[0, 0.66, -0.2]} rotation={[-0.12, 0, 0]} castShadow>
-        <boxGeometry args={[0.46, 0.42, 0.05]} />
-        {/* a shade of blue, not another off-white: against a pale wall the chairs had no
-            edge at all and the row read as a smudge */}
-        <meshStandardMaterial color="#b7ccd8" emissive="#9db6c4" emissiveIntensity={0.35} roughness={0.8} metalness={0} />
-      </mesh>
-      {([1, -1] as const).map((side) => (
-        <mesh key={side} position={[side * 0.19, 0.21, 0]} castShadow>
-          <boxGeometry args={[0.03, 0.42, 0.4]} />
-          <meshStandardMaterial color="#c9d3d9" emissive="#bcc7ce" emissiveIntensity={0.35} roughness={0.6} metalness={0.1} />
-        </mesh>
-      ))}
-    </group>
-  )
+  /**
+   * The painted panel: how high it comes, and where its right-hand edge falls. The edge is
+   * placed rather than the width: it wants to land just past the cabinet, so the machine
+   * stands against colour and the white wall opens up beside it — an edge that stops short
+   * of the machine leaves it floating in the white half of the frame.
+   */
+  const PANEL_H = 2.05
+  const PANEL_RIGHT = 0.95
+  const PANEL_W = 12
 
   return (
     <group {...props}>
-      {/* the wall, in two tones with a skirting along the bottom */}
+      {/* white wall, floor to ceiling */}
       <mesh position={[0, WALL_H / 2, Z]} receiveShadow>
         <planeGeometry args={[WALL_W, WALL_H]} />
         {/* the wall faces the camera and takes almost no key, so it is painted well up
             towards white or it renders as mid grey and the room reads as a basement */}
-        <meshStandardMaterial color="#ffffff" emissive="#eef4f7" emissiveIntensity={0.55} roughness={1} metalness={0} />
+        <meshStandardMaterial color="#ffffff" emissive="#fdf7ee" emissiveIntensity={0.62} roughness={1} metalness={0} />
       </mesh>
-      <mesh position={[0, DADO / 2, Z + 0.004]} receiveShadow>
-        <planeGeometry args={[WALL_W, DADO]} />
-        <meshStandardMaterial color="#e8eff2" emissive="#dbe6ec" emissiveIntensity={0.45} roughness={1} metalness={0} />
+      {/*
+        And a painted panel across the left of it, floor to shoulder height. A thin dado
+        band read as a corridor in a public building; a broad block of colour that the
+        seating and the signage sit against is what a waiting area actually looks like,
+        and it gives the cabinet an edge to stand on rather than a flat white field.
+      */}
+      <mesh position={[PANEL_RIGHT - PANEL_W / 2, PANEL_H / 2, Z + 0.004]} receiveShadow>
+        <planeGeometry args={[PANEL_W, PANEL_H]} />
+        <meshStandardMaterial color="#8ea2ae" emissive="#7e94a2" emissiveIntensity={0.42} roughness={1} metalness={0} />
       </mesh>
-      <mesh position={[0, DADO, Z + 0.006]}>
-        <planeGeometry args={[WALL_W, 0.012]} />
-        <meshStandardMaterial color="#cfdae0" emissive="#c6d3da" emissiveIntensity={0.4} roughness={1} metalness={0} />
-      </mesh>
+      {/* skirting, running the whole wall */}
       <mesh position={[0, 0.045, Z + 0.02]}>
         <boxGeometry args={[WALL_W, 0.09, 0.04]} />
-        <meshStandardMaterial color="#dde5e9" emissive="#cfd9df" emissiveIntensity={0.35} roughness={1} metalness={0} />
+        <meshStandardMaterial color="#f4efe6" emissive="#e9e2d6" emissiveIntensity={0.4} roughness={1} metalness={0} />
       </mesh>
 
       {/*
@@ -584,40 +660,20 @@ export function HospitalLobby(props: React.ComponentProps<'group'>) {
       */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0015, 0]} receiveShadow>
         <planeGeometry args={[26, 26]} />
-        <meshStandardMaterial color="#f1f4f5" roughness={0.92} metalness={0} />
+        <meshStandardMaterial map={floor} emissive="#efe0ca" emissiveIntensity={0.3} roughness={0.86} metalness={0} />
       </mesh>
 
-      {/* wayfinding, well off to the left of the cabinet */}
-      <mesh position={[-2.55, 1.92, Z + 0.03]}>
-        <planeGeometry args={[1.12, 0.4]} />
-        <meshStandardMaterial map={sign} roughness={0.85} metalness={0} />
+      {/* the department, lettered straight onto the painted panel */}
+      <mesh position={[-3.0, 1.62, Z + 0.03]}>
+        <planeGeometry args={[1.5, 0.44]} />
+        <meshStandardMaterial map={sign} transparent roughness={0.85} metalness={0} />
       </mesh>
 
-      {/* a row of waiting chairs against the wall, left of the machine */}
-      {[-3.15, -2.6, -2.05].map((x, i) => chair(x, i))}
+      {/* one armchair against the panel, turned a little into the room */}
+      <LobbyModel url={CHAIR_URL} tint="#c9714b" position={[-2.6, 0, Z + 0.72]} rotation={[0, 0.34, 0]} scale={1.05} />
 
-      {/* and a plant on the other side, to stop the right of the frame going empty */}
-      <group position={[2.35, 0, Z + 0.55]}>
-        <mesh position={[0, 0.17, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.17, 0.13, 0.34, 20]} />
-          <meshStandardMaterial color="#eceff1" emissive="#dfe4e7" emissiveIntensity={0.35} roughness={0.9} metalness={0} />
-        </mesh>
-        <mesh position={[0, 0.345, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 0.02, 20]} />
-          <meshStandardMaterial color="#5f6f63" roughness={1} metalness={0} />
-        </mesh>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <mesh
-            key={i}
-            position={[Math.sin(i * 1.3) * 0.1, 0.62 + (i % 3) * 0.12, Math.cos(i * 1.3) * 0.08]}
-            rotation={[0.1, i * 1.3, Math.sin(i) * 0.35]}
-            castShadow
-          >
-            <planeGeometry args={[0.2, 0.46]} />
-            <meshStandardMaterial color="#c8dbca" emissive="#a9c3ac" emissiveIntensity={0.4} roughness={0.9} metalness={0} side={THREE.DoubleSide} />
-          </mesh>
-        ))}
-      </group>
+      {/* and the plant on the other side, to stop the right of the frame going empty */}
+      <LobbyModel url={PLANT_URL} position={[2.5, 0, Z + 0.6]} rotation={[0, -0.6, 0]} scale={1.25} />
     </group>
   )
 }
