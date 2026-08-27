@@ -3,7 +3,7 @@ import { cubicBezier, type Ease } from '../anim/easing'
 import { DIST, FOV, custom, k, shot, steps, track } from './dsl'
 import {
   A, BASKET, BASKET_VIEW, BOX_ON_SHELF, CARTON, DEMO, DOOR, FULL, IN_BASKET,
-  READ, SCAN, SLOT, TABLE, TAKE, collectActors,
+  READ, SCAN, SLOT, TAKE, collectActors,
 } from './collectCommon'
 
 /**
@@ -36,8 +36,6 @@ import {
  *  19.4-23.0  dissolve to the medicine; the sticker is pressed onto it
  *  23.0-26.4  back at the cabinet; the screen confirms the whole order is done
  */
-/** where she stands beside the table, having just set the case down */
-const AT_TABLE: [number, number, number] = [TABLE[0] - 0.34, 0, 0.8]
 /** where she stands at the front of the cabinet, facing the scan window and the slot */
 const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
 /**
@@ -58,8 +56,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.1113, -0.0158, -0.1168]
-const CONTACT_TURN: [number, number, number] = [0.6999, -0.4616, 1.0602]
+const CONTACT: [number, number, number] = [0.1312, 0.0073, -0.1111]
+const CONTACT_TURN: [number, number, number] = [0.7182, -0.4745, 1.0654]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -304,15 +302,17 @@ export const patientCollectOpd: SceneDef = {
       // is standing, and from her talking distance the fingers stopped short of the shelf.
       k(1.4, [-1.5, 0, 1.95], 'smooth'),
       k(2.8, AT_BAY, 'smooth'),
-      k(4.3, AT_BAY),
-      k(5.4, AT_BAY),
-      k(6.7, AT_FRONT, 'smooth'),
-      k(9.8, AT_FRONT),
-      // she walks to the table as the cabinet dissolves, and is repositioned there while
-      // hidden for the unpacking demonstration
-      k(10.8, AT_TABLE, 'smooth'),
-      k(15.6, AT_TABLE),
-      k(16.4, AT_FRONT, 'smooth'),
+      // She steps back off the bay as she lifts the case out, not a second later — and
+      // over the whole lift, not in one move at the front of it. It used to happen
+      // between 5.4 and 6.7, by which point she is standing in the open holding the case
+      // and it reads as shuffling; spread across the lift it is the step back you take
+      // with something you have just picked up.
+      k(3.9, AT_BAY),
+      k(5.7, AT_FRONT, 'smooth'),
+      // and she stays there. She used to walk across to the table as the cabinet
+      // dissolved and walk back for the sticker, but the demonstrations do not play at
+      // the table — they play on their own, with her faded out — so the walk was two
+      // moves that started while she was still on screen and served nothing.
       k(26.4, AT_FRONT),
     ]),
     // she fades out with the cabinet: what is left on screen is the case alone
@@ -477,14 +477,19 @@ export const patientCollectOpd: SceneDef = {
       k(0, BOX_ON_SHELF),
       k(4.0999, BOX_ON_SHELF, 'linear'),
       // ---- held: an offset in her hand's frame ----
-      k(4.1, CONTACT),
-      // The contact offset is where the case is standing, not where her hand is: the rig
-      // cannot lengthen the arm, so the grip lands short and the case is caught a hand's
-      // width up and out from the palm. It settles into the palm as the fingers close,
-      // while the hand is still down inside the bay and the move is not on show — held
-      // out there any longer it simply rides behind her forearm.
+      /*
+       * The contact offset is where the case is *standing*, not where her hand is. The rig
+       * cannot lengthen the arm, so the grip lands short of the shelf and the case is
+       * caught a hand's width out towards her fingertips — which is why it reads as sitting
+       * off the front of her hand at the moment it changes owners.
+       *
+       * It settles back into the palm over the four tenths after that, while the hand is
+       * still down inside the bay and the lift is already carrying the frame. Any longer
+       * and the case is out at the fingers in open shot; any shorter and the settle is a
+       * jump of its own.
+       */
       k(4.1, CONTACT, [0.3, 0.1, 0.3, 1]),
-      k(4.7, HOLD, 'smooth'),
+      k(4.5, HOLD, 'smooth'),
       k(7.2, HOLD, 'smooth'),
       k(7.8, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
