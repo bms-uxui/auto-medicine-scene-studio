@@ -58,8 +58,8 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
  * reach moved the settled arm by half a degree and reshaping the pull moved the camera
  * the aim is solved against, and between them the case was snapping 6.8 cm at 4.6.
  */
-const CONTACT: [number, number, number] = [0.0314, 0.0624, -0.0061]
-const CONTACT_TURN: [number, number, number] = [0.6822, 0.0379, 1.5888]
+const CONTACT: [number, number, number] = [0.1127, 0.1142, -0.0279]
+const CONTACT_TURN: [number, number, number] = [0.9688, -0.3179, 1.3383]
 /**
  * How she carries it at the window, and how far behind her hand it rides.
  *
@@ -99,19 +99,6 @@ const GRAB_AIM: [number, number, number] = [BOX_ON_SHELF[0], BOX_ON_SHELF[1] + 0
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
 /** and where she stands to reach into the pick-up bay */
 const AT_BAY: [number, number, number] = [0.3, 0, 0.78]
-/**
- * Where she stands for the grab itself, a hand's width closer in.
- *
- * The rig swings the arm about the shoulder and cannot lengthen it, so the grip always
- * lands a little short along the line it is aimed down. From 0.78 the shortfall is about
- * 15 cm, which at a metre reads as the fingers closing on the near edge of the case and
- * at 0.82 m reads as a hand grasping a third of a frame away from it. She steps in for
- * the reach and back out as she straightens.
- *
- * She can stand this close only because the body is not drawn during the insert — at this
- * range the cut-out board would be through the front of the cabinet.
- */
-const AT_GRAB: [number, number, number] = [0.3, 0, 0.6]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 
@@ -318,9 +305,9 @@ export const patientCollectOpd: SceneDef = {
       // shoulder — it cannot lengthen it — so where the hand lands is set by how close she
       // is standing, and from her talking distance the fingers stopped short of the shelf.
       k(1.4, [-1.5, 0, 1.95], 'smooth'),
-      k(2.8, AT_GRAB, 'smooth'),
-      k(4.3, AT_GRAB),
-      k(5.4, AT_BAY, 'smooth'),
+      k(2.8, AT_BAY, 'smooth'),
+      k(4.3, AT_BAY),
+      k(5.4, AT_BAY),
       k(6.7, AT_FRONT, 'smooth'),
       k(9.8, AT_FRONT),
       // she walks to the table as the cabinet dissolves, and is repositioned there while
@@ -401,8 +388,8 @@ export const patientCollectOpd: SceneDef = {
        * then settle, which is the jolt the arm was riding on top of.
        */
       k(2.8, 0, 'smooth'),
-      k(3.6, 1, 'smooth'),
-      k(4.2, 1, 'smooth'),
+      k(3.6, 0.88, 'smooth'),
+      k(4.2, 0.88, 'smooth'),
       k(5.0, 0, 'smooth'), k(26.4, 0),
     ]),
     custom('patient', 'reachTarget', [
