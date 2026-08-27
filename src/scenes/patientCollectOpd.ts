@@ -423,15 +423,16 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- props in her hand ----
     // from the unpacking demonstration on, what she carries is the medicine itself
-    track('handBox', 'visible', steps([[0, false], [15.8, true], [20.2, false], [23.2, true]])),
-    track('handBox', 'opacity', [
-      k(15.8, 0), k(16.4, 1, 'smooth'), k(19.4, 1), k(20.2, 0, 'smooth'),
-      k(23.2, 0), k(24.0, 1, 'smooth'), k(26.4, 1),
-    ]),
-    track('handBox', 'rotation', [
-      k(16.4, [0.05, -0.3, 0.1]),
-      k(17.6, [0.05, -0.2, 0], 'smooth'),
-    ]),
+    /*
+     * She is empty-handed at the sticker slot. The medicine used to be back in her hand
+     * from 15.8, so the whole collecting-the-sticker beat played with a box held up
+     * beside the slot it prints from — two things to look at, and only one of them is
+     * what the caption is asking her to do. It comes back for the last beat, once the
+     * sticker is on it.
+     */
+    track('handBox', 'visible', steps([[0, false], [23.2, true]])),
+    track('handBox', 'opacity', [k(23.2, 0), k(24.0, 1, 'smooth'), k(26.4, 1)]),
+    track('handBox', 'rotation', [k(23.2, [0.05, -0.2, 0])]),
     // the printed sticker rides in her hand from the slot into the applying demonstration
     track('label', 'visible', steps([[0, false], [19.4, true], [20.0, false]])),
     track('label', 'opacity', [k(19.4, 1), k(19.6, 1), k(20.0, 0, 'smooth')]),
