@@ -171,6 +171,33 @@ const push = Array.from({ length: PUSH_STEPS + 1 }, (_, i) => {
   }
 })
 
+/**
+ * And the pull back out, built the same way as the push.
+ *
+ * It starts while she is still reaching, not once she has hold of the bottle: the
+ * handover happens at 4.6, and a frame that is already widening at that moment reads as a
+ * person taking something off a shelf rather than as a prop changing hands.
+ *
+ * Distance grows by a constant ratio so the apparent zoom rate stays even, every key is
+ * linear except the last, and the bay stays centred while the camera swings round to her
+ * right — pulling straight back onto her puts her shoulder across the frame.
+ */
+const PULL_T0 = 3.5
+const PULL_T1 = 5.9
+const PULL_STEPS = 24
+const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
+  const v = i / PULL_STEPS
+  const u = v * v * (3 - 2 * v)
+  return {
+    t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
+    target: mix(ON_SHELF, DOOR, u),
+    dist: PUSH_DIST * Math.pow(1.9 / PUSH_DIST, u),
+    yaw: 34.6 + (42 - 34.6) * u,
+    pitch: 13 + (12 - 13) * u,
+    ease: (i === PULL_STEPS ? 'smooth' : 'linear') as Ease,
+  }
+})
+
 export const patientCollectBottle: SceneDef = {
   id: 'patient-collect-bottle',
   name: 'Patient · Collecting Medicine (no case)',
@@ -189,15 +216,9 @@ export const patientCollectBottle: SceneDef = {
       // and locks that aim half a second after the reach stops changing, so a camera still
       // moving through the grab leaves the hand grasping at thin air.
       ...push.map((s) => k(s.t, shot(s.target, s.dist, 34.6, 13), s.ease)),
-      // The insert holds only as far as the moment she has hold of it. From there the
-      // camera is already on its way out, so the handover and the lift play at a size
-      // where they read as a person taking something rather than as geometry being
-      // handed between two frames of reference.
-      k(4.5, shot(ON_SHELF, 1.03, 34.6, 13), 'smooth'),
-      // Out of the insert while she still has hold of it, keeping the bay centred and
-      // swinging round to her right — pulling straight back onto her instead put her
-      // shoulder across the whole frame for a second.
-      k(5.9, shot(DOOR, 1.9, 42, 12), 'smooth'),
+      // a beat at the tightest framing while her hand comes into the bay, then straight
+      // back out again under the grab — see `pull` above
+      ...pull.map((s) => k(s.t, shot(s.target, s.dist, s.yaw, s.pitch), s.ease)),
       // then back onto her, and across the cabinet face to the window
       k(6.7, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
       k(7.2, shot(FRONT_WIDE, 2.9, 28, 10), 'smooth'),
@@ -218,8 +239,7 @@ export const patientCollectBottle: SceneDef = {
     track('target', 'position', [
       k(0, FULL),
       ...push.map((s) => k(s.t, s.target, s.ease)),
-      k(4.5, ON_SHELF),
-      k(5.9, DOOR, 'smooth'),
+      ...pull.map((s) => k(s.t, s.target, s.ease)),
       k(6.7, FRONT_WIDE, 'smooth'),
       k(7.2, FRONT_WIDE),
       k(8.0, SCAN, 'smooth'),
