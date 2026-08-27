@@ -61,7 +61,7 @@ const AT_FRONT: [number, number, number] = [0.24, 0, 0.92]
 const CONTACT: [number, number, number] = [0.0994, 0.0839, -0.1782]
 const CONTACT_TURN: [number, number, number] = [0.6484, -0.2327, 1.2486]
 /**
- * How she carries it once it is out, and how far behind her hand it rides.
+ * How she carries it at the window, and how far behind her hand it rides.
  *
  * The depth here is a clearance, not a look. The rig is a cut-out: the fist is painted on
  * a flat plane through the grip, so anything whose near face lands in front of that plane
@@ -71,17 +71,19 @@ const CONTACT_TURN: [number, number, number] = [0.6484, -0.2327, 1.2486]
  * third of it stood through her hand; carried flat, with the lid facing away, it reaches
  * only 4 cm and sits clear at 5.2 cm back while still reading as a box she is holding.
  *
- * Flat is also the pose the scan window wants, so the turn to the reader at 8.6 became a
- * settle instead of a flip.
+ * Nothing turns it while she is picking it up, though. It comes out of the bay held
+ * exactly as it stood on the shelf — a case that rolls over in a closing hand reads as an
+ * object being posed rather than one being taken — and only turns flat once it is clear of
+ * the cabinet and on its way to the reader.
  */
 const CARRY: [number, number, number] = [0.004, -0.044, -0.052]
-const CARRY_TURN: [number, number, number] = [1.5, -0.12, 0.04]
 /**
- * Held a shade deeper while it is still turning: the roll out of `CONTACT_TURN` swings a
- * corner of the case forward through the plane on the way past, so the draw holds it back
- * behind the fist until it is flat and only then brings it up to `CARRY`.
+ * Where it rides while it is still turned exactly as it came off the shelf. Held on edge
+ * like that the case reaches 9.4 cm towards the camera from its own centre — more than
+ * twice what it needs lying flat — so it has to ride that much further back to stay behind
+ * the drawn fist, and only comes forward to `CARRY` once it is flat for the reader.
  */
-const DRAW: [number, number, number] = [0.06, 0, -0.118]
+const HOLD: [number, number, number] = [0.004, -0.044, -0.112]
 /** raised as she arrives at the window, and turned so the lid's QR faces the reader */
 const RAISE_TURN: [number, number, number] = [1.45, -0.15, 0.06]
 const SCAN_TURN: [number, number, number] = [1.45, -0.22, 0.05]
@@ -447,8 +449,11 @@ export const patientCollectOpd: SceneDef = {
       // ---- held: an offset in her hand's frame ----
       k(4.6, CONTACT),
       k(4.7, CONTACT, 'smooth'),
-      k(4.9, DRAW, 'smooth'),
-      k(5.9, CARRY, 'smooth'),
+      // out of the bay riding deep, because it is still on edge; it only comes forward in
+      // her hand once it has turned flat for the reader
+      k(5.9, HOLD, 'smooth'),
+      k(7.2, HOLD, 'smooth'),
+      k(7.8, CARRY, 'smooth'),
       k(10.5999, CARRY, 'linear'),
       // ---- loose again: world coordinates ----
       k(10.6, DEMO),
@@ -461,12 +466,13 @@ export const patientCollectOpd: SceneDef = {
     track('case', 'rotation', [
       k(0, [0, 0.2, 0]),
       k(4.5999, [0, 0.2, 0], 'linear'),
-      // it stays turned exactly as it stood on the shelf and rolls level in her hand as
-      // she draws it out: the hand's own frame is rolled over by the arm swing, so
-      // without the counter-roll in CARRY_TURN the tray ends up carried on its side
+      // Nothing turns it through the pick-up. It is rigid in her hand from the moment she
+      // closes on it, held exactly as it stood on the shelf, all the way out of the bay —
+      // a case that rolls over between the fingers as they close reads as a prop being
+      // posed. Only once it is clear does it turn flat, on the walk to the window.
       k(4.6, CONTACT_TURN),
       k(4.7, CONTACT_TURN, 'smooth'),
-      k(5.4, CARRY_TURN, 'smooth'),
+      k(5.9, CONTACT_TURN, 'smooth'),
       k(7.2, RAISE_TURN, 'smooth'),
       k(7.5, RAISE_TURN),
       // the QR is printed on the lid, so the lid has to be turned to face the reader —
@@ -479,10 +485,14 @@ export const patientCollectOpd: SceneDef = {
 
     // ---- the medicine itself, on stage for both demonstrations ----
     track('demoBox', 'visible', steps([
-      [0, false], [11.2, true], [14.3, false], [19.6, true], [23.4, false],
+      [0, false], [11.2, true], [14.5, false], [19.6, true], [23.4, false],
     ])),
     track('demoBox', 'opacity', [
-      k(11.2, 0), k(11.8, 1, 'smooth'), k(14.2, 1),
+      // it used to hold full opacity until the frame it was switched off, so it popped
+      // rather than left. It fades from the moment it is clear of the tray and is gone
+      // well before the case starts down into the basket at 15.2 — the return is the
+      // instruction here, and nothing should still be drawing the eye when it happens.
+      k(11.2, 0), k(11.8, 1, 'smooth'), k(13.9, 1), k(14.4, 0, 'smooth'),
       k(19.6, 0), k(20.4, 1, 'smooth'), k(22.8, 1), k(23.4, 0, 'smooth'),
     ]),
     track('demoBox', 'position', [
@@ -491,17 +501,20 @@ export const patientCollectOpd: SceneDef = {
       k(13.6, [DEMO[0], DEMO[1] - 0.006, DEMO[2]]),
       // up out of the open tray, then away — the shot stays with the case, which is
       // what goes back to the basket
-      k(14.2, [DEMO[0], DEMO[1] + 0.075, DEMO[2]], 'smooth'),
-      k(14.3, [DEMO[0], DEMO[1] + 0.075, DEMO[2]]),
-      k(14.5, CARTON),   // repositioned while invisible, ready for the apply demo
+      k(14.1, [DEMO[0], DEMO[1] + 0.075, DEMO[2]], 'smooth'),
+      k(14.5, [DEMO[0], DEMO[1] + 0.075, DEMO[2]]),
+      k(14.6, CARTON),   // repositioned while invisible, ready for the apply demo
       k(26.4, CARTON),
     ]),
     track('demoBox', 'rotation', [
-      // flat in the case at the demonstration, then square to camera for the apply beat
+      // Flat in the case at the demonstration, then square to camera for the apply beat.
+      // The turn between the two has to happen after it is switched off, not before: it
+      // used to start at 14.2 while the carton was still up, so what read on screen was
+      // the medicine tilting as it rose out of the tray.
       k(0, [-Math.PI / 2, 0, Math.PI / 2]),
       k(11.2, [-Math.PI / 2, 0, Math.PI / 2]),
-      k(14.2, [-Math.PI / 2, 0, Math.PI / 2]),
-      k(14.5, [0, 0, 0]),
+      k(14.5, [-Math.PI / 2, 0, Math.PI / 2]),
+      k(14.6, [0, 0, 0]),
     ]),
 
     // ---- demonstration 2: peel the sticker off its backing and press it on ----
