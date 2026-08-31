@@ -120,6 +120,13 @@ const OUT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.05, GRAB
 const LIFT_AIM: [number, number, number] = [GRAB_AIM[0], GRAB_AIM[1] + 0.16, GRAB_AIM[2] + 0.09]
 /** and where she stands to reach into the pick-up bay */
 const AT_BAY: [number, number, number] = [0.3, 0, 0.75]
+/**
+ * What the frame follows on the way out. Above the hand's own aim: the rig's grip lands
+ * short along the line it is aimed at, so a camera centred on the aim itself sits low —
+ * the hand and the case ran up into the top of the frame through the whole lift and the
+ * wrist was cut off by the edge, while two thirds of the shot was empty bay.
+ */
+const LIFT_VIEW: Vec3 = [LIFT_AIM[0], LIFT_AIM[1] + 0.06, LIFT_AIM[2]]
 /** the pull-back that takes in the cabinet and her walking across its face */
 const FRONT_WIDE: [number, number, number] = [FULL[0], 1.05, FULL[2] + 0.2]
 
@@ -201,7 +208,7 @@ const pull = Array.from({ length: PULL_STEPS + 1 }, (_, i) => {
   const u = v * v * (3 - 2 * v)
   return {
     t: +(PULL_T0 + (PULL_T1 - PULL_T0) * v).toFixed(3),
-    target: u < 0.4 ? mix(BOX_ON_SHELF, LIFT_AIM, u / 0.4) : mix(LIFT_AIM, PULL_HIGH, (u - 0.4) / 0.6),
+    target: u < 0.4 ? mix(BOX_ON_SHELF, LIFT_VIEW, u / 0.4) : mix(LIFT_VIEW, PULL_HIGH, (u - 0.4) / 0.6),
     dist: PUSH_DIST * Math.pow(PULL_DIST / PUSH_DIST, u),
     yaw: 34.6 + (42 - 34.6) * u,
     pitch: 13 + (12 - 13) * u,
@@ -515,7 +522,18 @@ export const patientCollectOpd: SceneDef = {
      * From the demonstration on it is the `demoBox` actor instead, because there it has
      * to leave the case rather than stay in it.
      */
-    custom('case', 'empty', steps([[0, 0], [10.6, 1]])),
+    /*
+     * The medicine is inside the case until the demonstration takes over the job of
+     * showing it, at 10.6.
+     *
+     * A pair of `steps` will not do that. `steps` writes LINEAR keys, which is a step only
+     * for a value nothing can interpolate — a screen name, an attachment. `empty` is a
+     * number, so a lone key either side of the beat ramped it across the whole ten seconds
+     * between them and it passed the half-way mark, where the case stops drawing what is
+     * in it, at 5.3 — in the middle of her carrying it to the window. The medicine
+     * disappeared out of a transparent case while it was in shot.
+     */
+    custom('case', 'empty', [k(0, 0), k(10.5999, 0, 'linear'), k(10.6, 1)]),
     custom('case', 'open', [k(12.3, 0), k(13.2, 1, 'smooth'), k(26.4, 1)]),
     track('case', 'opacity', [
       // it dissolves out with her for the demonstration, and is back for it
